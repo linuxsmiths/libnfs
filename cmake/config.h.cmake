@@ -6,6 +6,9 @@
 /* Whether we have clock_gettime */
 #cmakedefine HAVE_CLOCK_GETTIME
 
+/* Whether gnutls exports the function gnutls_transport_is_ktls_enabled() */
+#cmakedefine HAVE_GNUTLS_TRANSPORT_IS_KTLS_ENABLED
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #cmakedefine HAVE_DLFCN_H
 
