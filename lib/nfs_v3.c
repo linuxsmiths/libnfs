@@ -1017,6 +1017,7 @@ nfs3_mount_2_cb(struct rpc_context *rpc, int status, void *command_data,
 	struct nfs_context *nfs = data->nfs;
 	mountres3 *res;
 
+	printf("TOMAR: nfs3_mount_2_cb called with status %d\n", status);
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	if (check_nfs3_error(nfs, status, data, command_data)) {
@@ -1051,6 +1052,7 @@ nfs3_mount_2_cb(struct rpc_context *rpc, int status, void *command_data,
                nfs->nfsi->rootfh.len);
 
 	if (nfs->nfsi->auto_traverse_mounts) {
+		printf("TOMAR: inside auto_traverse_mounts\n");
 		if (rpc_mount3_export_task(rpc, nfs3_mount_3_cb, data) == NULL) {
                         nfs_set_error(nfs, "%s: %s", __FUNCTION__,
                                       nfs_get_error(nfs));
@@ -1063,6 +1065,20 @@ nfs3_mount_2_cb(struct rpc_context *rpc, int status, void *command_data,
 	}
 
 	rpc_disconnect(rpc, "normal disconnect");
+
+#if 0
+#ifdef HAVE_TLS
+	/*
+	 * Now this rpc_context is going to be used for connecting to the NFS
+	 * program for which we need secure transport, but only if user has used
+	 * the mount option xprtsec=[tls,mtls].
+	 */
+	printf("TOMAR: rpc->wanted_xprtsec=%d\n", rpc->wanted_xprtsec);
+	rpc->use_tls = (rpc->wanted_xprtsec == RPC_XPRTSEC_TLS ||
+			rpc->wanted_xprtsec == RPC_XPRTSEC_MTLS);
+#endif
+#endif
+
         if (nfs->nfsi->nfsport) {
                 if (rpc_connect_port_async(nfs->rpc, nfs_get_server(nfs),
                                            nfs->nfsi->nfsport,
@@ -1096,6 +1112,7 @@ nfs3_mount_1_cb(struct rpc_context *rpc, int status, void *command_data,
 	struct nfs_cb_data *data = private_data;
 	struct nfs_context *nfs = data->nfs;
 
+	printf("TOMAR: nfs3_mount_1_cb called with status %d\n", status);
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	if (check_nfs3_error(nfs, status, data, command_data)) {
@@ -1128,6 +1145,11 @@ nfs3_mount_async(struct nfs_context *nfs, const char *server,
         free(nfs->nfsi->server);
 	nfs->nfsi->server = new_server;
         
+#ifdef HAVE_TLS
+	nfs->rpc->server = strdup(nfs->nfsi->server);
+	printf("TOMAR: nfs3_mount_async: nfs->rpc->server=%s\n", nfs->rpc->server);
+#endif
+
 	new_export = strdup(export);
 	if (new_export == NULL) {
 		nfs_set_error(nfs, "out of memory. failed to allocate "

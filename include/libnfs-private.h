@@ -35,6 +35,10 @@
 #include "lib/krb5-wrapper.h"
 #endif
 
+#ifdef HAVE_TLS
+#include <gnutls/gnutls.h>
+#endif
+
 #if defined(WIN32) && !defined(IFNAMSIZ)
 #define IFNAMSIZ 255
 #endif
@@ -172,6 +176,35 @@ enum input_state {
         READ_UNKNOWN = 5,
 };
 
+#ifdef HAVE_TLS
+struct tls_cb_data {
+	rpc_cb cb;
+	void *private_data;
+};
+
+typedef enum tls_handshake_state {
+	TLS_HANDSHAKE_UNDEFINED = 0,
+	TLS_HANDSHAKE_WAITING_FOR_STARTTLS,
+	TLS_HANDSHAKE_IN_PROGRESS,
+	TLS_HANDSHAKE_COMPLETED,
+	TLS_HANDSHAKE_FAILED,
+} tls_handshake_state_t;
+
+/*
+ * TLS handshake context information.
+ */
+struct tls_context {
+	/* Current TLS handshake state */
+	enum tls_handshake_state state;
+
+	/* Callback to be called on handshake completion */
+	struct tls_cb_data data;
+
+	/* gnutls session used for the handshake */
+	gnutls_session_t session;
+};
+#endif /* HAVE_TLS */
+
 struct gss_ctx_id_struct;
 struct rpc_context {
 	uint32_t magic;
@@ -235,6 +268,36 @@ struct rpc_context {
 	char ifname[IFNAMSIZ];
 	int poll_timeout;
 
+#ifdef HAVE_TLS
+	/*
+	 * Transport level security as selected by the xprtsec=[none,tls,mtls]
+	 * mount option.
+	 */
+	enum rpc_xprtsec wanted_xprtsec;
+
+	/*
+	 * Do we need to send AUTH_TLS NULL RPC on connect/reconnect?
+	 * Note that we need this even with wanted_xprtsec as we use TLS only
+	 * for connections to NFS program and not for MOUNT or PORTMAP.
+	 * Once set, this remains set for the life of the rpc_context as we need
+	 * it for reconnect also.
+	 */
+	bool_t use_tls;
+
+	/* NFS version to use when sending the AUTH_TLS NULL RPC */
+	int nfs_version;
+
+	/*
+	 * Server name to be used for certificate verification.
+	 * Since at RPC layer we don't have access to struct nfs_context, we instead
+	 * save a copy here from nfs_get_server().
+	 */
+	char *server;
+
+	/* Context used for performing TLS handshake with the server */
+	struct tls_context tls_context;
+#endif /* HAVE_TLS */
+
 #ifdef HAVE_LIBKRB5
         const char *username;
         enum rpc_sec wanted_sec;
@@ -242,7 +305,7 @@ struct rpc_context {
         uint32_t gss_seqno;
         int context_len;
         char *context;
-        
+
         void *auth_data; /* for krb5 */
         struct gss_ctx_id_struct *gss_context;
 #endif /* HAVE_LIBKRB5 */
@@ -297,15 +360,20 @@ struct rpc_pdu {
         int start_of_payload;
         gss_buffer_desc output_buffer;
 #endif
+
+#ifdef HAVE_TLS
+	/* Set by rpc_allocate_pdu2() when we use AUTH_TLS for a NULL RPC request */
+	bool_t expect_starttls;
+#endif
 };
 
 void rpc_reset_queue(struct rpc_queue *q);
 void rpc_enqueue(struct rpc_queue *q, struct rpc_pdu *pdu);
 void rpc_return_to_queue(struct rpc_queue *q, struct rpc_pdu *pdu);
 unsigned int rpc_hash_xid(struct rpc_context *rpc, uint32_t xid);
-
 struct rpc_pdu *rpc_allocate_pdu(struct rpc_context *rpc, int program, int version, int procedure, rpc_cb cb, void *private_data, zdrproc_t zdr_decode_fn, int zdr_bufsize);
 struct rpc_pdu *rpc_allocate_pdu2(struct rpc_context *rpc, int program, int version, int procedure, rpc_cb cb, void *private_data, zdrproc_t zdr_decode_fn, int zdr_bufsize, size_t alloc_hint);
+
 void rpc_free_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
 int rpc_queue_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
 int rpc_process_pdu(struct rpc_context *rpc, char *buf, int size);
@@ -324,9 +392,9 @@ void nfs_set_error(struct nfs_context *nfs, char *error_string, ...)
 #endif
 ;
 
-#if defined(PS2_EE)        
+#if defined(PS2_EE)
 #define RPC_LOG(rpc, level, format, ...) ;
-#else        
+#else
 #define RPC_LOG(rpc, level, format, ...) \
 	do { \
 		if (level <= rpc->debug) { \
@@ -430,7 +498,7 @@ struct nfs_context_internal {
        struct nfs_thread_context *thread_ctx;
 #endif /* HAVE_MULTITHREADING */
 };
-        
+
 struct nfs_context {
        struct rpc_context *rpc;
        struct nfs_context_internal *nfsi;
@@ -448,7 +516,7 @@ struct nfs_thread_context {
         struct nfs_context nfs;
 };
 #endif /* HAVE_MULTITHREADING */
-        
+
 typedef int (*continue_func)(struct nfs_context *nfs, struct nfs_attr *attr,
 			     struct nfs_cb_data *data);
 
@@ -465,7 +533,7 @@ struct nfs_cb_data {
        void *continue_data;
        void (*free_continue_data)(void *);
        uint64_t continue_int;
-        
+
        struct nfs_fh fh;
 
        /* for multi-read/write calls. */
@@ -615,7 +683,7 @@ int nfs3_utimes_async_internal(struct nfs_context *nfs, const char *path,
 int nfs3_write_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                      const void *buf, size_t count, nfs_cb cb,
                      void *private_data);
-   
+
 int nfs4_access_async(struct nfs_context *nfs, const char *path, int mode,
                       nfs_cb cb, void *private_data);
 int nfs4_access2_async(struct nfs_context *nfs, const char *path, nfs_cb cb,
@@ -699,7 +767,12 @@ int rpc_write_to_socket(struct rpc_context *rpc);
 int _nfs_mount_async(struct nfs_context *nfs, const char *server,
                      const char *exportname, nfs_cb cb,
                      void *private_data);
-        
+
+#ifdef HAVE_TLS
+int tls_global_init(struct rpc_context *rpc);
+enum tls_handshake_state do_tls_handshake(struct rpc_context *rpc);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

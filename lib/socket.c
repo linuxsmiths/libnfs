@@ -299,7 +299,10 @@ rpc_write_to_socket(struct rpc_context *rpc)
                           rpc->max_waitpdu_len > (rpc->waitpdu_len + num_pdus)) &&
                          pdu != NULL && niov < RPC_MAX_VECTORS);
 
+		errno = 0;
+		//printf("TOMAR: writev() on fd %d\n", rpc->fd);
                 count = writev(rpc->fd, iov, niov);
+	//	printf("TOMAR: writev() returned %ld (errno=%d)\n", count, errno);
                 if (count == -1) {
                         if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                 ret = 0;
@@ -542,20 +545,30 @@ rpc_read_from_socket(struct rpc_context *rpc)
                                 count = rpc->inbuf_size;
                         }
                 }
+		errno = 0;
+		//printf("TOMAR: recv(%ld bytes) from fd %d\n", count, rpc->fd);
 		count = recv(rpc->fd, rpc->buf, count, MSG_DONTWAIT);
+		//printf("TOMAR: returned %ld (errno=%d)\n", count, errno);
 		if (count < 0) {
                         /*
                          * No more data to read so we can break out of
                          * the loop and return.
                          */
 			if (errno == EINTR || errno == EAGAIN) {
+#if 0
+				printf("TOMAR: recv failed with errno %d (%s)\n",
+					errno, strerror(errno));
+#endif
 				break;
 			}
-			rpc_set_error(rpc, "Read from socket failed, errno:%d. "
-                                      "Closing socket.", errno);
+			rpc_set_error(rpc, "Read from socket(%d) failed, errno:%d(%s). "
+                                      "Closing socket.", rpc->fd, errno, strerror(errno));
+			RPC_LOG(rpc, 1, "TOMAR: Read from socket(%d) failed rpc->inbuf_size=%d, errno:%d(%s). "
+                                      "Closing socket.", rpc->fd, rpc->inbuf_size, errno, strerror(errno));
 			return -1;
 		}
 		if (count == 0) {
+			printf("TOMAR: Remote side closed connection\n");
 			/* remote side has closed the socket. Reconnect. */
 			return -1;
 		}
@@ -571,12 +584,14 @@ rpc_read_from_socket(struct rpc_context *rpc)
                                         rpc->state = READ_PAYLOAD;
                                 } else {
                                         rpc_set_error(rpc, "Fragment support not yet working");
+                                        printf("TOMAR: Fragment support not yet working");
                                         rpc->state = READ_FRAGMENT;
                                         return -1;
                                 }
                                 rpc->rm_xid[0] &= 0x7fffffff;
                                 if (rpc->rm_xid[0] < 8 || rpc->rm_xid[0] > MAX_FRAGMENT_SIZE) {
                                         rpc_set_error(rpc, "Invalid recordmarker size");
+                                        printf("TOMAR: Invalid recordmarker size");
                                         return -1;
                                 }
                                 adjust_inbuf(rpc, rpc->rm_xid[0]);
@@ -602,6 +617,7 @@ rpc_read_from_socket(struct rpc_context *rpc)
                         case READ_FRAGMENT:
                                 if (rpc_add_fragment(rpc, rpc->inbuf, rpc->inpos) != 0) {
                                         rpc_set_error(rpc, "Failed to queue fragment for reassembly.");
+                                        printf("TOMAR: Failed to queue fragment for reassembly.");
                                         return -1;
                                 }
                                 rpc->state = READ_RM;
@@ -622,6 +638,9 @@ rpc_read_from_socket(struct rpc_context *rpc)
                                 }
                                 if (rpc_process_pdu(rpc, rpc->buf, rpc->pdu_size) != 0) {
                                         rpc_set_error(rpc, "Invalid/garbage pdu"
+                                                      " received from server. "
+                                                      "Closing socket");
+                                        printf("TOMAR: Invalid/garbage pdu"
                                                       " received from server. "
                                                       "Closing socket");
                                         return -1;
@@ -692,6 +711,8 @@ rpc_read_from_socket(struct rpc_context *rpc)
 static void
 maybe_call_connect_cb(struct rpc_context *rpc, int status)
 {
+	printf("TOMAR: maybe_call_connect_cb(fd=%d), rpc->connect_cb=%p status=%d\n",
+		      	rpc->fd, rpc->connect_cb, status);
 	rpc_cb tmp_cb = rpc->connect_cb;
 
 	if (rpc->connect_cb == NULL) {
@@ -812,6 +833,7 @@ rpc_service(struct rpc_context *rpc, int revents)
 			rpc_set_error(rpc, "Socket failed with POLLHUP");
 		}
 		if (rpc->auto_reconnect) {
+			printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
 			return rpc_reconnect_requeue(rpc);
 		}
 		maybe_call_connect_cb(rpc, RPC_STATUS_ERROR);
@@ -836,26 +858,107 @@ rpc_service(struct rpc_context *rpc, int revents)
 		}
 
 		rpc->is_connected = 1;
-		RPC_LOG(rpc, 2, "connection established on fd %d", rpc->fd);
+		//RPC_LOG(rpc, 2, "connection established on fd %d", rpc->fd);
+		RPC_LOG(rpc, 1, "TOMAR: connection established on fd %d", rpc->fd);
 		maybe_call_connect_cb(rpc, RPC_STATUS_SUCCESS);
 		return 0;
 	}
+
+#ifdef HAVE_TLS
+	/*
+	 * We perform TLS handshake in a nonblocking fashion, i.e., we don't
+	 * block on recv() and send(), so if we get a POLLIN or POLLOUT event
+	 * during TLS handshake we must advance the TLS handshake process by
+	 * calling do_tls_handshake() again. do_tls_handshake() will return
+	 * TLS_HANDSHAKE_IN_PROGRESS if it needs to wait for network IO, o/w
+	 * it'll complete the handshake process.
+	 * Note that do_tls_handshake() can correctly handle multiple calls and
+	 * it can advance the handshake process till it either completes successfully
+	 * or fails.
+	 */
+	if (rpc->tls_context.state == TLS_HANDSHAKE_IN_PROGRESS && (revents & (POLLOUT | POLLIN))) {
+		struct tls_cb_data *data = &rpc->tls_context.data;
+
+		assert(rpc->use_tls);
+
+		rpc->tls_context.state = do_tls_handshake(rpc);
+
+		switch (rpc->tls_context.state) {
+			case TLS_HANDSHAKE_IN_PROGRESS:
+				RPC_LOG(rpc, 2, "do_tls_handshake() returned TLS_HANDSHAKE_IN_PROGRESS on fd %d",
+					rpc->fd);
+				break;
+			case TLS_HANDSHAKE_COMPLETED:
+				RPC_LOG(rpc, 2, "do_tls_handshake() returned TLS_HANDSHAKE_COMPLETED on fd %d",
+					rpc->fd);
+				data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
+				break;
+			case TLS_HANDSHAKE_FAILED:
+				RPC_LOG(rpc, 1, "do_tls_handshake() returned TLS_HANDSHAKE_FAILED on fd %d",
+					rpc->fd);
+				data->cb(rpc, RPC_STATUS_ERROR, "TLS_HANDSHAKE_FAILED", data->private_data);
+				break;
+			default:
+				/* Should not return any other status */
+				assert(0);
+		}
+
+		return 0;
+	} 
+#if 0
+	else if (rpc->use_tls && (rpc->tls_context.state != TLS_HANDSHAKE_COMPLETED)) {
+		RPC_LOG(rpc, 2, "TLS handshake state %d on fd %d", rpc->tls_context.state, rpc->fd);
+		return 0;
+	}
+#endif
+
+	/*
+	 * For secure NFS connections we should never proceed to read/write from
+	 * the socket w/o properly completing the TLS handshake.
+	 */
+//	assert(!rpc->use_tls || (rpc->tls_context.state == TLS_HANDSHAKE_COMPLETED));
+#endif /* HAVE_TLS */
 
 	if (revents & POLLIN) {
 		if (rpc_read_from_socket(rpc) != 0) {
                         if (rpc->is_server_context) {
                                 return -1;
                         } else {
+#ifdef HAVE_TLS
+				/*
+				 * TODO: read from ktls sockets will fail with EIO
+				 *       if TLS records of type other than data
+				 *       (e.g., alert or handshake) are received.
+				 *       We will need to issue a recvmsg() call
+				 *       with enough cmsg space to fetch the
+				 *       record type and data correctly.
+				 *       We can then log that here to help the
+				 *       user. In any case the only valid course
+				 *       of action is to terminate the connection
+				 *       and reconnect so that we can correctly
+				 *       re-auth.
+				 */
+#endif /* HAVE_TLS */
+				printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
                                 return rpc_reconnect_requeue(rpc);
                         }
 		}
 	}
 
+#ifdef HAVE_TLS
+	if (rpc->use_tls && (rpc->tls_context.state != TLS_HANDSHAKE_COMPLETED)) {
+                RPC_LOG(rpc, 2, "TLS handshake state %d on fd %d", rpc->tls_context.state, rpc->fd);
+                return 0;
+        }
+#endif
+
 	if (revents & POLLOUT && rpc_has_queue(&rpc->outqueue)) {
+		//printf("TOMAR: calling rpc_write_to_socket\n");
 		if (rpc_write_to_socket(rpc) != 0) {
                         if (rpc->is_server_context) {
                                 return -1;
                         } else {
+				printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
                                 return rpc_reconnect_requeue(rpc);
                         }
 		}
@@ -938,6 +1041,7 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 
 	if (rpc->old_fd) {
 #if !defined(WIN32) && !defined(PS3_PPU) && !defined(PS2_EE)
+		printf("TOMAR: dup2(%d, %d)\n", rpc->fd, rpc->old_fd);
 		if (dup2(rpc->fd, rpc->old_fd) == -1) {
 			return -1;
 		}
@@ -1146,14 +1250,50 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 	return 0;
 }
 
+#ifdef HAVE_TLS
 static void
-reconnect_cb(struct rpc_context *rpc, int status, void *data _U_,
+reconnect_cb_tls(struct rpc_context *rpc, int status,
+		 void *command_data, void *private_data)
+{
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	/* Must be called only for TLS transport */
+	assert(rpc->use_tls);
+
+	/* Must be called only after TLS handshake completes/fails */
+	assert(rpc->tls_context.state == TLS_HANDSHAKE_COMPLETED ||
+	       rpc->tls_context.state == TLS_HANDSHAKE_FAILED);
+
+	/*
+	 * If handshake failed, restart the TCP connection which will also retry
+	 * the TLS handshake.
+	 */
+	if (rpc->tls_context.state == TLS_HANDSHAKE_FAILED) {
+		RPC_LOG(rpc, 1, "reconnect_cb_tls: TLS handshake failed, restarting connection!");
+
+		if (rpc->fd != -1) {
+			close(rpc->fd);
+			rpc->fd  = -1;
+		}
+		rpc->is_connected = 0;
+		printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
+		rpc_reconnect_requeue(rpc);
+		return;
+	}
+
+	RPC_LOG(rpc, 2, "reconnect_cb_tls: TLS handshake completed!");
+}
+#endif
+
+static void
+reconnect_cb(struct rpc_context *rpc, int status, void *data,
              void *private_data)
 {
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	if (status != RPC_STATUS_SUCCESS) {
 		rpc_set_error(rpc, "Failed to reconnect async");
+		printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
 		rpc_reconnect_requeue(rpc);
 		return;
 	}
@@ -1161,6 +1301,35 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data _U_,
 	rpc->is_connected = 1;
 	rpc->connect_cb   = NULL;
 	rpc->old_fd = 0;
+
+#ifdef HAVE_TLS
+	/*
+	 * For secure NFS connections, we need to setup TLS session now.
+	 */
+	printf("TOMAR: reconnect_cb called\n");
+	if (rpc->use_tls) {
+		if (rpc_null_task_authtls(rpc, rpc->nfs_version,
+					  reconnect_cb_tls, NULL) == NULL) {
+			RPC_LOG(rpc, 1, "reconnect_cb: rpc_null_task_authtls failed, restarting connection!");
+
+			/*
+			 * Force reconnect so that we can time the retries using
+			 * the existing rpc->num_retries. Forcing reconnect also
+			 * has the advantage that it sets up a fresh TCP connection
+			 * in case the older connection had some issues preventing
+			 * TLS handshake.
+			 */
+			if (rpc->fd != -1) {
+				close(rpc->fd);
+				rpc->fd  = -1;
+			}
+			rpc->is_connected = 0;
+			printf("TOMAR: calling rpc_reconnect_requeue from line %d\n", __LINE__);
+			rpc_reconnect_requeue(rpc);
+			return;
+		}
+	}
+#endif /* HAVE_TLS */
 }
 
 /* Disconnect but do not error all PDUs, just move pdus in-flight back to the
@@ -1226,7 +1395,7 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
 	if (rpc->auto_reconnect < 0 || rpc->num_retries > 0) {
 		rpc->num_retries--;
 		rpc->connect_cb  = reconnect_cb;
-		RPC_LOG(rpc, 1, "reconnect initiated");
+		RPC_LOG(rpc, 1, "reconnect initiated rpc->auto_reconnect=%d rpc->num_retries=%d", rpc->auto_reconnect, rpc->num_retries);
 		if (rpc_connect_sockaddr_async(rpc) != 0) {
 			rpc_error_all_pdus(rpc, "RPC ERROR: Failed to "
                                            "reconnect async");

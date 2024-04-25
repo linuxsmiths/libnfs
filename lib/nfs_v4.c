@@ -1625,6 +1625,17 @@ nfs4_mount_async(struct nfs_context *nfs, const char *server,
         free(nfs->nfsi->server);
         nfs->nfsi->server = new_server;
 
+#ifdef HAVE_TLS
+	nfs->rpc->server = strdup(nfs->nfsi->server);
+	/*
+	 * Now this rpc_context is going to be used for connecting to the NFS
+	 * program for which we need secure transport, but only if user has used
+	 * the mount option xprtsec=[tls,mtls].
+	 */
+	nfs->rpc->use_tls = (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_TLS ||
+			     nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_MTLS);
+#endif
+
         new_export = strdup(export);
 	if (new_export == NULL) {
 		nfs_set_error(nfs, "out of memory. failed to allocate "
