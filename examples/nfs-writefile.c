@@ -56,7 +56,8 @@ WSADATA wsaData;
 
 
 #define MAX_CONCURRENCY 1024 /* keep up to 1024 writes in flight at a time */
-#define WRITE_SIZE     65536 /* each write is this big */
+//#define WRITE_SIZE     65536 /* each write is this big */
+#define WRITE_SIZE     1048576 /* each write is this big */
 
 struct write_file_context {
 	int status; /*  0: still running,
