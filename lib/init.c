@@ -159,8 +159,15 @@ struct rpc_context *rpc_init_context(void)
 	/* Default is no limit */
 	rpc->max_waitpdu_len = 0;
 
-	/* Default is no timeout */
-	rpc->timeout = -1;
+	/*
+	 * Default RPC timeout is 60 secs, but it will later be updated if user
+	 * has passed the timeo=<int> mount option. Another way to set the RPC
+	 * timeout is by calling the nfs_set_timeout()/rpc_set_timeout()
+	 * function but the mount option is preferable.
+	 */
+	rpc->timeout = 60 * 1000;
+	rpc->retrans = 2;
+
 	/* Default is to timeout after 100ms of poll(2) */
 	rpc->poll_timeout = 100;
 
@@ -464,9 +471,7 @@ void rpc_destroy_context(struct rpc_context *rpc)
         free(discard_const(rpc->username));
         free(rpc->context);
 #endif /* HAVE_LIBKRB5 */
-#ifdef HAVE_TLS
 	free(rpc->server);
-#endif
 	free(rpc);
 }
 
@@ -484,11 +489,11 @@ int rpc_get_poll_timeout(struct rpc_context *rpc)
 	return rpc->poll_timeout;
 }
 
-void rpc_set_timeout(struct rpc_context *rpc, int timeout)
+void rpc_set_timeout(struct rpc_context *rpc, int timeout_msecs)
 {
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-	rpc->timeout = timeout;
+	rpc->timeout = timeout_msecs;
 }
 
 int rpc_get_timeout(struct rpc_context *rpc)
@@ -496,6 +501,13 @@ int rpc_get_timeout(struct rpc_context *rpc)
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	return rpc->timeout;
+}
+
+void rpc_set_retrans(struct rpc_context *rpc, int retrans)
+{
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	rpc->retrans = retrans;
 }
 
 int rpc_register_service(struct rpc_context *rpc, int program, int version,

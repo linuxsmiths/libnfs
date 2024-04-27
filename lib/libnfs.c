@@ -246,6 +246,16 @@ nfs_set_context_args(struct nfs_context *nfs, const char *arg, const char *val)
 		rpc_set_uid(nfs_get_rpc_context(nfs), atoi(val));
 	} else if (!strcmp(arg, "gid")) {
 		rpc_set_gid(nfs_get_rpc_context(nfs), atoi(val));
+	} else if (!strcmp(arg, "timeo")) {
+		/* val is in deci-seconds */
+		const int timeout_msecs = atoi(val) * 100;
+		if (timeout_msecs < (10 * 1000)) {
+			nfs_set_error(nfs, "timeo (%s) cannot be less than 100", val);
+			return -1;
+		}
+		rpc_set_timeout(nfs_get_rpc_context(nfs), timeout_msecs);
+	} else if (!strcmp(arg, "retrans")) {
+		rpc_set_retrans(nfs_get_rpc_context(nfs), atoi(val));
 	} else if (!strcmp(arg, "debug")) {
 		rpc_set_debug(nfs_get_rpc_context(nfs), atoi(val));
 	} else if (!strcmp(arg, "auto-traverse-mounts")) {

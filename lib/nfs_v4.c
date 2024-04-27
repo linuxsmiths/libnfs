@@ -1625,10 +1625,8 @@ nfs4_mount_async(struct nfs_context *nfs, const char *server,
         free(nfs->nfsi->server);
         nfs->nfsi->server = new_server;
 
-#ifdef HAVE_TLS
 	free(nfs->rpc->server);
 	nfs->rpc->server = strdup(nfs->nfsi->server);
-#endif
 
         new_export = strdup(export);
 	if (new_export == NULL) {

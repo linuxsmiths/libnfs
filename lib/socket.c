@@ -740,14 +740,38 @@ rpc_timeout_scan(struct rpc_context *rpc)
 			/* not expired yet */
 			continue;
 		}
-		LIBNFS_LIST_REMOVE(&rpc->outqueue.head, pdu);
-		if (!rpc->outqueue.head) {
-			rpc->outqueue.tail = NULL; //done
+
+		/*
+		 * rpc->retrans > 0 implies that user wants us to retransmit
+		 * timed out RPCs. We update the timeout values for this RPC
+		 * and leave it in the outqueue.
+		 */
+		if (rpc->retrans > 0) {
+			/* Ask pdu_set_timeout() to set pdu->timeout */
+			pdu->timeout = 0;
+
+			if (t >= pdu->major_timeout) {
+				/* Ask pdu_set_timeout() to set pdu->major_timeout */
+				pdu->major_timeout = 0;
+				if (!pdu->snr_logged) {
+					/* Log only once for an RPC */
+					pdu->snr_logged = TRUE;
+					RPC_LOG(rpc, 1, "Server %s not responding, still trying",
+						rpc->server);
+				}
+			}
+			/* Reset the RPC timeout values as appropriate */
+			pdu_set_timeout(rpc, pdu, t);
+		} else {
+			LIBNFS_LIST_REMOVE(&rpc->outqueue.head, pdu);
+			if (!rpc->outqueue.head) {
+				rpc->outqueue.tail = NULL; //done
+			}
+			rpc_set_error(rpc, "command timed out");
+			pdu->cb(rpc, RPC_STATUS_TIMEOUT,
+				NULL, pdu->private_data);
+			rpc_free_pdu(rpc, pdu);
 		}
-		rpc_set_error(rpc, "command timed out");
-		pdu->cb(rpc, RPC_STATUS_TIMEOUT,
-			NULL, pdu->private_data);
-		rpc_free_pdu(rpc, pdu);
 	}
 	for (i = 0; i < rpc->num_hashes; i++) {
 		struct rpc_queue *q;
@@ -769,12 +793,39 @@ rpc_timeout_scan(struct rpc_context *rpc)
 				q->tail = NULL;
 			}
 			rpc->waitpdu_len--;
-                        // qqq move to a temporary queue and process after
-                        // we drop the mutex
-			rpc_set_error(rpc, "command timed out");
-			pdu->cb(rpc, RPC_STATUS_TIMEOUT,
-				NULL, pdu->private_data);
-			rpc_free_pdu(rpc, pdu);
+
+			/*
+			 * rpc->retrans > 0 implies that user wants us to retransmit
+			 * timed out RPCs. We update the timeout values for this RPC
+			 * and move it to the outqueue.
+			 */
+			if (rpc->retrans > 0) {
+				/* Ask pdu_set_timeout() to set pdu->timeout */
+				pdu->timeout = 0;
+
+				if (t >= pdu->major_timeout) {
+					/* Ask pdu_set_timeout() to set pdu->major_timeout */
+					pdu->major_timeout = 0;
+					if (!pdu->snr_logged) {
+						/* Log only once for an RPC */
+						pdu->snr_logged = TRUE;
+						RPC_LOG(rpc, 1, "Server %s not responding, "
+								"still trying", rpc->server);
+					}
+				}
+				/* Reset the RPC timeout values as appropriate */
+				pdu_set_timeout(rpc, pdu, t);
+
+				/* queue it back to outqueue for retransmit */
+				rpc_enqueue(&rpc->outqueue, pdu);
+			} else {
+				// qqq move to a temporary queue and process after
+				// we drop the mutex
+				rpc_set_error(rpc, "command timed out");
+				pdu->cb(rpc, RPC_STATUS_TIMEOUT,
+					NULL, pdu->private_data);
+				rpc_free_pdu(rpc, pdu);
+			}
 		}
 	}
 #ifdef HAVE_MULTITHREADING

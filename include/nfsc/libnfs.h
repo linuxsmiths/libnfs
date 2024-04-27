@@ -1996,6 +1996,9 @@ EXTERN int nfs_get_poll_timeout(struct nfs_context *nfs);
  * int milliseconds : timeout to be applied in milliseconds (-1 no timeout)
  *                    timeouts must currently be set in whole seconds,
  *                    i.e. units of 1000
+ *
+ * Note: Prefer the mount option timeo=<int> to set the timeout over directly
+ *       calling nfs_set_timeout().
  */
 EXTERN void nfs_set_timeout(struct nfs_context *nfs, int milliseconds);
 

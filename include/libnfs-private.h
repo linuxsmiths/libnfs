@@ -255,6 +255,17 @@ struct rpc_context {
 	int auto_reconnect;
 	int num_retries;
 
+	/*
+	 * Server name of the RPC peer. It has the following uses:
+	 * - Used for certificate verification, in case of xprtsec=[tls,mtls]
+	 *   mount option.
+	 * - For logging along with the "server not responding" message.
+	 *
+	 * Since at RPC layer we don't have access to struct nfs_context, we instead
+	 * save a copy here from nfs_get_server().
+	 */
+	char *server;
+
 	/* fragment reassembly */
 	struct rpc_fragment *fragments;
 
@@ -264,7 +275,29 @@ struct rpc_context {
 	int gid;
 	int debug;
         uint64_t last_timeout_scan;
+
+        /*
+         * RPC timeout in milliseconds. This is set from the timeo=<int> mount
+         * option. This is also called the "minor timeout", in contrast to the
+         * "major timeout" that happens after retrans*timeout milliseconds.
+         * It cannot have a value less than 10000 milliseconds, i.e., 10 seconds.
+         */
 	int timeout;
+
+	/*
+	 * Number of times an RPC request is retried before taking further
+	 * recovery action. This is set from the retrans=<int> mount option.
+	 * If 'retrans' is 0 then RPC requests are not retried and they fail
+	 * (with RPC_STATUS_TIMEOUT) after 'timeout' milliseconds. This roughly
+	 * mimics the "soft" mount option of NFS clients. Note that it's almost
+	 * never a good idea for NFS clients to let RPC requests fail, so 'retrans'
+	 * must not be set to 0.
+	 * If 'retrans' is non-zero then that's the number of times an RPC
+	 * request is retried before declaring a "major timeout", which prompts
+	 * more stricter recovery actions, f.e., reconnection.
+	 */
+	int retrans;
+
 	char ifname[IFNAMSIZ];
 	int poll_timeout;
 
@@ -292,13 +325,6 @@ struct rpc_context {
 
 	/* NFS version to use when sending the AUTH_TLS NULL RPC */
 	int nfs_version;
-
-	/*
-	 * Server name to be used for certificate verification.
-	 * Since at RPC layer we don't have access to struct nfs_context, we instead
-	 * save a copy here from nfs_get_server().
-	 */
-	char *server;
 
 	/* Context used for performing TLS handshake with the server */
 	struct tls_context tls_context;
@@ -359,7 +385,37 @@ struct rpc_pdu {
 #define PDU_DISCARD_AFTER_SENDING 0x00000001
         uint32_t flags;
 
+	/*
+	 * Absolute (minor) timeout in milliseconds for this RPC request.
+	 * This is set to current time in milliseconds (when the RPC is
+	 * queued) plus rpc->timeout.
+	 * If we do not get a response for an RPC request till timeout
+	 * milliseconds we retry the RPC request and reset pdu->timeout to
+	 * the next rpc->timeout milliseconds.
+	 */
 	uint64_t timeout;
+
+	/*
+	 * Absolute major timeout in milliseconds for this RPC request.
+	 * A major timeout happens after every rpc->retrans retries, i.e.,
+	 * after rpc->retrans*rpc->timeout milliseconds.
+	 * If we do not get a response for an RPC request till 'major_timeout'
+	 * milliseconds we log the "server not responding" message and take
+	 * further recovery action like reconnecting to the server and retry
+	 * the RPC over the new connection. 'major_timeout' is also reset to
+	 * the next rpc->retrans*rpc->timeout milliseconds.
+	 */
+	uint64_t major_timeout;
+
+	/*
+	 * Have we logged the "server not responding" message for this RPC.
+	 * Note that for any RPC the "server not responding" message is logged
+	 * just once, when the first major_timeout occurs. After a major timeout
+	 * if we get the response to the RPC request we log the "server OK"
+	 * message.
+	 */
+	bool_t snr_logged;
+
 #ifdef HAVE_LIBKRB5
         uint32_t gss_seqno;
         char creds[64];
@@ -379,6 +435,7 @@ void rpc_return_to_queue(struct rpc_queue *q, struct rpc_pdu *pdu);
 unsigned int rpc_hash_xid(struct rpc_context *rpc, uint32_t xid);
 struct rpc_pdu *rpc_allocate_pdu(struct rpc_context *rpc, int program, int version, int procedure, rpc_cb cb, void *private_data, zdrproc_t zdr_decode_fn, int zdr_bufsize);
 struct rpc_pdu *rpc_allocate_pdu2(struct rpc_context *rpc, int program, int version, int procedure, rpc_cb cb, void *private_data, zdrproc_t zdr_decode_fn, int zdr_bufsize, size_t alloc_hint);
+void pdu_set_timeout(struct rpc_context *rpc, struct rpc_pdu *pdu, uint64_t now_msecs);
 
 void rpc_free_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
 int rpc_queue_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
@@ -427,6 +484,7 @@ void rpc_set_debug(struct rpc_context *rpc, int level);
 void rpc_set_poll_timeout(struct rpc_context *rpc, int poll_timeout);
 int rpc_get_poll_timeout(struct rpc_context *rpc);
 void rpc_set_timeout(struct rpc_context *rpc, int timeout);
+void rpc_set_retrans(struct rpc_context *rpc, int retrans);
 int rpc_get_timeout(struct rpc_context *rpc);
 int rpc_add_fragment(struct rpc_context *rpc, char *data, uint32_t size);
 void rpc_free_all_fragments(struct rpc_context *rpc);
