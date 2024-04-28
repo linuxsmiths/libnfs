@@ -746,7 +746,7 @@ rpc_timeout_scan(struct rpc_context *rpc)
 		 * timed out RPCs. We update the timeout values for this RPC
 		 * and leave it in the outqueue.
 		 */
-		if (rpc->retrans > 0) {
+		if (!pdu->do_not_retry && rpc->retrans > 0) {
 			/* Ask pdu_set_timeout() to set pdu->timeout */
 			pdu->timeout = 0;
 
@@ -799,7 +799,7 @@ rpc_timeout_scan(struct rpc_context *rpc)
 			 * timed out RPCs. We update the timeout values for this RPC
 			 * and move it to the outqueue.
 			 */
-			if (rpc->retrans > 0) {
+			if (!pdu->do_not_retry && rpc->retrans > 0) {
 				/* Ask pdu_set_timeout() to set pdu->timeout */
 				pdu->timeout = 0;
 

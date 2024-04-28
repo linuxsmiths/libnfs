@@ -214,11 +214,14 @@ struct rpc_pdu *rpc_allocate_pdu2(struct rpc_context *rpc, int program, int vers
 	msg.body.cbody.vers    = version;
 	msg.body.cbody.proc    = procedure;
 
+	pdu->do_not_retry      = (program != NFS_PROGRAM);
+
 	/* For NULL RPC RFC recommends to use NULL authentication */
 	if (procedure == 0) {
 		msg.body.cbody.cred.oa_flavor    = AUTH_NONE;
 		msg.body.cbody.cred.oa_length    = 0;
 		msg.body.cbody.cred.oa_base      = NULL;
+		pdu->do_not_retry                = TRUE;
 	} else {
 		msg.body.cbody.cred    = rpc->auth->ah_cred;
 	}

@@ -386,6 +386,18 @@ struct rpc_pdu {
         uint32_t flags;
 
 	/*
+	 * If TRUE, this RPC would not be retried. If no response is received
+	 * it'll fail with RPC_STATUS_TIMEOUT after 'timeout' msecs.
+	 * 'major_timeout' and 'snr_logged' fields are ignored for an RPC which
+	 * has do_not_retry set.
+	 * Non-NFS RPCs are not retried as they are mostly sent before or during
+	 * the mount process and it's desirable to fail them so that the mount
+	 * program can fail with appropriate error to the user who is waiting for
+	 * the mount to complete.
+	 */
+	bool_t do_not_retry;
+
+	/*
 	 * Absolute (minor) timeout in milliseconds for this RPC request.
 	 * This is set to current time in milliseconds (when the RPC is
 	 * queued) plus rpc->timeout.
@@ -533,6 +545,8 @@ struct nfs_context_internal {
        size_t readmax;
        size_t writemax;
        int auto_reconnect;
+       int timeout;
+       int retrans;
        int dircache_enabled;
        struct nfsdir *dircache;
        uint16_t	mask;
