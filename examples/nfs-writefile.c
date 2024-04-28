@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
 		pfds[0].fd = nfs_get_fd(ctx->nfs);
 		pfds[0].events = nfs_which_events(ctx->nfs);
 
-		if (poll(&pfds[0], 1, nfs_get_poll_timeout()) < 0) {
+		if (poll(&pfds[0], 1, nfs_get_poll_timeout(ctx->nfs)) < 0) {
 			printf("Poll failed");
 			break;
 		}
