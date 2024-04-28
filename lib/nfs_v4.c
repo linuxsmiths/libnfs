@@ -1504,7 +1504,8 @@ nfs4_mount_4_cb(struct rpc_context *rpc, int status, void *command_data,
 	 * by the application which may not be equipped to handle TCP connection
 	 * failure and RPC timeouts, so we set the resiliency parameters of the
 	 * rpc_context as selected by the user using the mount options. The
-	 * default resiliency parameters emulate the common "hard" mount.
+	 * default resiliency parameters emulate the common "hard" mount and
+	 * we are resilient to any TCP or RPC connectivity issues.
          */
 	rpc_set_resiliency(rpc,
 			   nfs->nfsi->auto_reconnect,

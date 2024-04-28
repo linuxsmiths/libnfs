@@ -393,9 +393,9 @@ void pdu_set_timeout(struct rpc_context *rpc, struct rpc_pdu *pdu, uint64_t now_
 	/*
 	 * If pdu->timeout is 0 it means either this is the first time we are
 	 * setting the timeout for this RPC request or it has already timed out.
-	 * In both these cases we reset pdu->timeout after next rpc->timeout
-	 * msecs. If pdu->timeout is not 0 it means that the RPC has not yet
-	 * timed out and hence we leave it unchanged.
+	 * In both these cases we reset pdu->timeout to rpc->timeout from now.
+	 * If pdu->timeout is not 0 it means that the RPC has not yet timed out
+	 * and hence we leave it unchanged.
 	 */
 	if (pdu->timeout == 0) {
 		pdu->timeout = now_msecs + rpc->timeout;
@@ -416,6 +416,10 @@ void pdu_set_timeout(struct rpc_context *rpc, struct rpc_pdu *pdu, uint64_t now_
 #ifndef HAVE_CLOCK_GETTIME
 		pdu->major_timeout += 1000;
 #endif
+		/* Never less than pdu->timeout */
+		if (pdu->major_timeout < pdu->timeout) {
+			pdu->major_timeout = pdu->timeout;
+		}
 	}
 }
 
@@ -669,6 +673,10 @@ static int rpc_process_reply(struct rpc_context *rpc, ZDR *zdr)
 	case SUCCESS:
 		/* Last RPC response time for tracking RPC transport health */
 		rpc->last_successful_rpc_response = rpc_current_time();
+		if (pdu->snr_logged) {
+			RPC_LOG(rpc, 1, "[pdu %p] Server %s OK",
+				pdu, rpc->server);
+		}
 
                 if (pdu->in.buf) {
                         rpc->pdu->free_pdu = 1;

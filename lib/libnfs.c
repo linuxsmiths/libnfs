@@ -250,12 +250,17 @@ nfs_set_context_args(struct nfs_context *nfs, const char *arg, const char *val)
 		/* val is in deci-seconds */
 		const int timeout_msecs = atoi(val) * 100;
 		if (timeout_msecs < (10 * 1000)) {
-			nfs_set_error(nfs, "timeo (%s) cannot be less than 100", val);
+			nfs_set_error(nfs, "timeo cannot be less than 100: %s", val);
 			return -1;
 		}
 		nfs_set_timeout(nfs, timeout_msecs);
 	} else if (!strcmp(arg, "retrans")) {
-		nfs_set_retrans(nfs, atoi(val));
+		const int retrans = atoi(val);
+		if (retrans < 0) {
+			nfs_set_error(nfs, "retrans cannot be less than 0: %s", val);
+			return -1;
+		}
+		nfs_set_retrans(nfs, retrans);
 	} else if (!strcmp(arg, "debug")) {
 		rpc_set_debug(nfs_get_rpc_context(nfs), atoi(val));
 	} else if (!strcmp(arg, "auto-traverse-mounts")) {
@@ -581,7 +586,7 @@ nfs_init_context(void)
 	/*
 	 * Default resiliency parameters are chosen with safe values that
 	 * emulate "hard" mount, which means on any error (RPC or TCP) keep
-	 * trying indefinitely.
+	 * retrying indefinitely.
 	 *
 	 * TCP reconnect is indefinitely tried, RPC requests time out after
 	 * 60 secs and we retry an RPC request 2 times before declaring it as
@@ -2168,6 +2173,7 @@ nfs_set_retrans(struct nfs_context *nfs, int retrans) {
 	 * This will later be set in rpc_context using rpc_set_resiliency()
 	 * once the mount process completes.
 	 */
+	assert(retrans >= 0);
 	nfs->nfsi->retrans = retrans;
 }
 
@@ -2394,9 +2400,9 @@ nfs_set_timeout(struct nfs_context *nfs, int timeout)
 	 * Save the timeout in nfs_context_internal and also set it in
 	 * rpc_context. Contrast this with nfs_set_retrans() which only saves
 	 * the user provided value in nfs_context_internal but does not set it
-	 * in rpc_context. Note that it's ok to set timeout in the rpc_context
-	 * as timeout is used by all RPC requests while retrans adds resiliency
-	 * to RPC transport and is used only after the mount completes.
+	 * in rpc_context. Note that it's ok (and needed) to set timeout in the
+	 * rpc_context as timeout is used by all RPC requests while retrans adds
+	 * resiliency to RPC transport and is used only after the mount completes.
 	 */
 	nfs->nfsi->timeout = timeout;
 

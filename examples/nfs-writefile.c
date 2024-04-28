@@ -50,7 +50,6 @@ WSADATA wsaData;
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
 #include "libnfs.h"
 #include "libnfs-raw.h"
 #include "libnfs-raw-mount.h"
@@ -280,7 +279,8 @@ int main(int argc, char *argv[])
 
 	ctx->url = nfs_parse_url_full(ctx->nfs, argv[2]);
 	if (ctx->url == NULL) {
-		printf("failed to parse url: %s\n", argv[2]);
+		printf("failed to parse url: %s: %s\n",
+			argv[2], nfs_get_error(ctx->nfs));
 		free_write_file_context(ctx);
 		exit(10);
 	}

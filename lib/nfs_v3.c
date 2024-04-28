@@ -629,7 +629,8 @@ nfs3_mount_7_cb(struct rpc_context *rpc, int status, void *command_data,
 	 * by the application which may not be equipped to handle TCP connection
 	 * failure and RPC timeouts, so we set the resiliency parameters of the
 	 * rpc_context as selected by the user using the mount options. The
-	 * default resiliency parameters emulate the common "hard" mount.
+	 * default resiliency parameters emulate the common "hard" mount and
+	 * we are resilient to any TCP or RPC connectivity issues.
          */
 	rpc_set_resiliency(rpc,
 			   nfs->nfsi->auto_reconnect,
@@ -762,12 +763,6 @@ nfs3_mount_5_cb(struct rpc_context *rpc, int status, void *command_data,
 		return;
 	}
 
-#if 0
-	/* NFS TCP: As we are connected now we can pass on the auto-reconnect
-	 * settings to the RPC layer.
-         */
-	rpc_set_autoreconnect(rpc, nfs->nfsi->auto_reconnect);
-#endif
 	args.fsroot.data.data_len = nfs->nfsi->rootfh.len;
 	args.fsroot.data.data_val = nfs->nfsi->rootfh.val;
 	if (rpc_nfs3_fsinfo_task(rpc, nfs3_mount_6_cb, &args, data) == NULL) {

@@ -256,9 +256,10 @@ struct rpc_context {
 	int num_retries;
 
 	/*
-	 * Server name of the RPC peer. It has the following uses:
+	 * NFS server name or IP address. It has the following uses:
 	 * - Used for certificate verification, in case of xprtsec=[tls,mtls]
 	 *   mount option.
+	 *   Note: In this case it must be a DNS name and not an IP address.
 	 * - For logging along with the "server not responding" message.
 	 *
 	 * Since at RPC layer we don't have access to struct nfs_context, we instead
@@ -274,15 +275,15 @@ struct rpc_context {
 	int uid;
 	int gid;
 	int debug;
- 	uint64_t last_timeout_scan;
+	uint64_t last_timeout_scan;
 
 	/*
 	 * Absolute time in milliseconds when the last successful RPC response
 	 * was received over this RPC transport/connection. We use it to see if
-	 * some RPC transport could be stuck and terminating the connection may
-	 * help.
+	 * some RPC transport could be stuck and if yes we terminate and reconnect
+	 * as recovery action.
 	 * Note that this is to check activity at the RPC level and not at the
-	 * TCP level, latter is checked by setting the SO_KEEPALIVE socket option.
+	 * TCP level, latter is checked by using TCP keepalives.
 	 */
 	uint64_t last_successful_rpc_response;
 
@@ -290,7 +291,7 @@ struct rpc_context {
          * RPC timeout in milliseconds. This is set from the timeo=<int> mount
          * option. This is also called the "minor timeout", in contrast to the
          * "major timeout" that happens after retrans*timeout milliseconds.
-         * It cannot have a value less than 10000 milliseconds, i.e., 10 seconds.
+         * It cannot have a value less than 10000, i.e., 10 seconds.
          */
 	int timeout;
 
@@ -305,6 +306,10 @@ struct rpc_context {
 	 * If 'retrans' is non-zero then that's the number of times an RPC
 	 * request is retried before declaring a "major timeout", which prompts
 	 * more stricter recovery actions, f.e., reconnection.
+	 *
+	 * Note: This is set to non-zero only after successful mount as we want
+	 *       a resilient RPC transport only after mount.
+	 *       Ref rpc_set_resiliency().
 	 */
 	int retrans;
 
@@ -404,6 +409,17 @@ struct rpc_pdu {
 	 * the mount process and it's desirable to fail them so that the mount
 	 * program can fail with appropriate error to the user who is waiting for
 	 * the mount to complete.
+	 *
+	 * Note that there are two ways to ensure that RPCs are not retried:
+	 * 1. Set rpc->retrans to 0.
+	 * 2. Set pd->do_not_retry to TRUE.
+	 *
+	 * Since we set rpc->retrans to non-zero value only after successful
+	 * mount completion all RPCs sent during the mount process are not
+	 * retried. For any other PDU if we don't want it to be retried we need
+	 * to set pdu->do_not_retry to TRUE. One such example is the AUTH_TLS
+	 * NULL RPC sent on reconnect which needs to be sent inline and hence
+	 * cannot be safely retried.
 	 */
 	bool_t do_not_retry;
 
@@ -423,7 +439,7 @@ struct rpc_pdu {
 	 * after rpc->retrans*rpc->timeout milliseconds.
 	 * If we do not get a response for an RPC request till 'major_timeout'
 	 * milliseconds we log the "server not responding" message and take
-	 * further recovery action like reconnecting to the server and retry
+	 * further recovery action like reconnecting to the server and retrying
 	 * the RPC over the new connection. 'major_timeout' is also reset to
 	 * the next rpc->retrans*rpc->timeout milliseconds.
 	 */
@@ -510,7 +526,6 @@ int rpc_set_udp_destination(struct rpc_context *rpc, char *addr, int port, int i
 struct rpc_context *rpc_init_udp_context(void);
 struct sockaddr *rpc_get_recv_sockaddr(struct rpc_context *rpc);
 
-void rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries);
 void rpc_set_resiliency(struct rpc_context *rpc,
 			int num_tcp_reconnect,
 			int timeout,
@@ -570,9 +585,15 @@ struct nfs_context_internal {
        struct nfs_fh rootfh;
        size_t readmax;
        size_t writemax;
+       
+       /*
+	* Resilency parameters, taken from mount parameters and saved here.
+	* Later these are pushed to the RPC layer by rpc_set_resiliency().
+	*/
        int auto_reconnect;
        int timeout;
        int retrans;
+
        int dircache_enabled;
        struct nfsdir *dircache;
        uint16_t	mask;

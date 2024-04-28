@@ -197,10 +197,10 @@ set_keepalive(int sockfd)
 	}
 
 	/*
-	 * Following code uses Linux specific socket option to change keepalive
+	 * Following code uses Linux specific socket options to change keepalive
 	 * settings for the socket.
 	 *
-	 * TODO: Add for other clients.
+	 * TODO: Add for non-Linux clients.
 	 */
 
 #if defined(TCP_KEEPIDLE)
@@ -217,7 +217,7 @@ set_keepalive(int sockfd)
 
 #if defined(TCP_KEEPINTVL)
 	{
-		/* Send keepalive prove every 60 secs */
+		/* Send keepalive probe every 60 secs */
 		const int keepinterval_secs = 60;
 
 		if (set_tcp_sockopt(sockfd, TCP_KEEPINTVL, keepinterval_secs) != 0) {
@@ -766,8 +766,8 @@ maybe_call_connect_cb(struct rpc_context *rpc, int status)
 }
 
 /*
- * If it returns -1 it indicates that the timeout scan discovered one or more
- * RPCs with major timeout and caller must terminate the connection to try fix
+ * Return value of -1 indicates that the timeout scan discovered one or more
+ * RPCs with major timeout and caller MUST terminate the connection to try fix
  * things.
  */
 static int
@@ -778,7 +778,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 	uint64_t t = rpc_current_time();
 	unsigned int i;
 	/* Milliseconds since last successful RPC response on this transport */
-	const int last_rpc_msecs = (t - rpc->last_successful_rpc_response);
+	const int last_rpc_msecs =
+		((rpc->last_successful_rpc_response == 0) ? -1 :
+		 (t - rpc->last_successful_rpc_response));
 	bool_t need_reconnect = FALSE;
 
         /*
@@ -821,8 +823,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 				if (!pdu->snr_logged) {
 					/* Log only once for an RPC */
 					pdu->snr_logged = TRUE;
-					RPC_LOG(rpc, 1, "Server %s not responding, still trying",
-						rpc->server);
+					RPC_LOG(rpc, 1, "[pdu %p] Server %s not "
+						"responding, still trying",
+						pdu, rpc->server);
 				}
 				if (!need_reconnect) {
 					need_reconnect = (last_rpc_msecs > rpc->timeout);
@@ -877,8 +880,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 					if (!pdu->snr_logged) {
 						/* Log only once for an RPC */
 						pdu->snr_logged = TRUE;
-						RPC_LOG(rpc, 1, "Server %s not responding, "
-								"still trying", rpc->server);
+						RPC_LOG(rpc, 1, "[pdu %p] Server %s "
+							"not responding, still trying",
+							pdu, rpc->server);
 					}
 					if (!need_reconnect) {
 						need_reconnect = (last_rpc_msecs > rpc->timeout);
@@ -919,10 +923,10 @@ rpc_service(struct rpc_context *rpc, int revents)
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	/*
-	 * rpc_timeout_scan() will return non-zero to indicate that we need to
-	 * perform recovery action by reconnecting and queueing all RPCs on the
-	 * new connection. Schedule reconnect and requeue and return. Once the
-	 * new connection is ready, events will be processed for that.
+	 * rpc_timeout_scan() will return -1 to indicate that we need to perform
+	 * recovery action by reconnecting and queueing all RPCs on the new
+	 * connection. Schedule reconnect and requeue and return. Once the new
+	 * connection is ready, events will be processed for that.
 	 */
 	if (rpc_timeout_scan(rpc) != 0) {
 		return rpc_reconnect_requeue(rpc);
@@ -1085,28 +1089,15 @@ rpc_service(struct rpc_context *rpc, int revents)
 	return 0;
 }
 
-#if 0
-void
-rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
-{
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
-
-        /* we can not connect and not reconnect on a server context. */
-        if (rpc->is_server_context) {
-                return;
-        }
-
-	rpc->auto_reconnect = num_retries;
-}
-#endif
-
 /*
  * Set resiliency related paramters for the RPC context.
- * Following are the resiliency characteristics for RPC transport:
+ * Following are the resiliency parameters for RPC transport:
  * 1. num_tcp_reconnect:
  *    Number of times TCP reconnection is allowed before giving up.
+ *    -1 indicates retry indefinitely.
  * 2. timeout:
  *    How long we wait for an RPC response before retrying the RPC?
+ *    0 or -1 indicates infinite timeout.
  * 3. retrans:
  *    Number of times an RPC is retried before we consider it a "major timeout"
  *    and take further recovery actions which might involve reconnection.
@@ -1114,7 +1105,7 @@ rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
 void
 rpc_set_resiliency(struct rpc_context *rpc,
 		   int num_tcp_reconnect,
-		   int timeout,
+		   int timeout_msecs,
 		   int retrans)
 {
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
@@ -1124,8 +1115,15 @@ rpc_set_resiliency(struct rpc_context *rpc,
                 return;
         }
 
+	assert(retrans >= 0);
+	/*
+	 * Retransmission count doesn't have any significance for infinite timeouts,
+	 * warn the caller.
+	 */
+	assert(retrans == 0 || timeout_msecs > 0);
+
 	rpc->auto_reconnect = num_tcp_reconnect;
-	rpc->timeout = timeout;
+	rpc->timeout = timeout_msecs;
 	rpc->retrans = retrans;
 }
 
@@ -1292,8 +1290,8 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 	 * TCP stops responding.
 	 */
 	if (set_keepalive(rpc->fd) != 0) {
-		rpc_set_error(rpc, "Cannot enable keepalive: %s",
-                              strerror(errno));
+		rpc_set_error(rpc, "Cannot enable keepalive for fd %d: %s",
+                              rpc->fd, strerror(errno));
 		return -1;
 	}
 #endif
@@ -1400,12 +1398,9 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 		return 0;
 	}
 
-#if 0
-	/* Disable autoreconnect */
-	rpc_set_autoreconnect(rpc, 0);
-#else
+	/* Turn off resiliency */
 	rpc_set_resiliency(rpc, 0, rpc->timeout, 0);
-#endif
+
 	rpc->is_connected = 0;
 
         if (!rpc->is_server_context) {

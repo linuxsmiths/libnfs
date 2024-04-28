@@ -359,7 +359,7 @@ static void wait_until_finished(struct rpc_context *rpc, struct client *client)
 		pfd.fd = rpc_get_fd(rpc);
 		pfd.events = rpc_which_events(rpc);
 
-		if (poll(&pfd, 1, rpc_get_poll_timeout(rpc)) < 0) {
+		if (poll(&pfd, 1, -1) < 0) {
 			printf("Poll failed");
 			exit(10);
 		}
