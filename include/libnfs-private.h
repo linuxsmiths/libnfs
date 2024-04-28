@@ -274,7 +274,17 @@ struct rpc_context {
 	int uid;
 	int gid;
 	int debug;
-        uint64_t last_timeout_scan;
+ 	uint64_t last_timeout_scan;
+
+	/*
+	 * Absolute time in milliseconds when the last successful RPC response
+	 * was received over this RPC transport/connection. We use it to see if
+	 * some RPC transport could be stuck and terminating the connection may
+	 * help.
+	 * Note that this is to check activity at the RPC level and not at the
+	 * TCP level, latter is checked by setting the SO_KEEPALIVE socket option.
+	 */
+	uint64_t last_successful_rpc_response;
 
         /*
          * RPC timeout in milliseconds. This is set from the timeo=<int> mount
@@ -469,12 +479,25 @@ void nfs_set_error(struct nfs_context *nfs, char *error_string, ...)
 
 #if defined(PS2_EE)
 #define RPC_LOG(rpc, level, format, ...) ;
+#define LOG(rpc, level, format, ...) ;
 #else
 #define RPC_LOG(rpc, level, format, ...) \
 	do { \
 		if (level <= rpc->debug) { \
 			fprintf(stderr, "libnfs:%d rpc %p " format "\n", level, rpc, ## __VA_ARGS__); \
 		} \
+	} while (0)
+/*
+ * Use LOG() for logging from code where there is no rpc_context.
+ * It only provides simple unconditional logging since we don't have any debug
+ * level to compare against.
+ *
+ * Note: Use it sparingly only for critical logs which cannot be conveyed to the
+ *       user through any better means.
+ */
+#define LOG(format, ...) \
+	do { \
+		fprintf(stderr, "libnfs: " format "\n", ## __VA_ARGS__); \
 	} while (0)
 #endif
 
@@ -500,7 +523,6 @@ void rpc_set_debug(struct rpc_context *rpc, int level);
 void rpc_set_poll_timeout(struct rpc_context *rpc, int poll_timeout);
 int rpc_get_poll_timeout(struct rpc_context *rpc);
 void rpc_set_timeout(struct rpc_context *rpc, int timeout);
-void rpc_set_retrans(struct rpc_context *rpc, int retrans);
 int rpc_get_timeout(struct rpc_context *rpc);
 int rpc_add_fragment(struct rpc_context *rpc, char *data, uint32_t size);
 void rpc_free_all_fragments(struct rpc_context *rpc);

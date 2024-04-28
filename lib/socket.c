@@ -184,7 +184,64 @@ set_tcp_sockopt(int sockfd, int optname, int value)
 	return setsockopt(sockfd, level, optname, (char *)&value,
                           sizeof(value));
 }
+
+static int
+set_keepalive(int sockfd)
+{
+	const int enable_keepalive = 1;
+
+	if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE,
+		       &enable_keepalive, sizeof(enable_keepalive)) != 0) {
+		LOG("setsockopt(SO_KEEPALIVE) failed: %s", strerror(errno));
+		return -1;
+	}
+
+	/*
+	 * Following code uses Linux specific socket option to change keepalive
+	 * settings for the socket.
+	 *
+	 * TODO: Add for other clients.
+	 */
+
+#if defined(TCP_KEEPIDLE)
+	{
+		/* First keepalive probe after 60 secs of inactivity */
+		const int keepidle_secs = 60;
+
+		if (set_tcp_sockopt(sockfd, TCP_KEEPIDLE, keepidle_secs) != 0) {
+			LOG("setsockopt(TCP_KEEPIDLE) failed: %s", strerror(errno));
+			return -1;
+		}
+	}
 #endif
+
+#if defined(TCP_KEEPINTVL)
+	{
+		/* Send keepalive prove every 60 secs */
+		const int keepinterval_secs = 60;
+
+		if (set_tcp_sockopt(sockfd, TCP_KEEPINTVL, keepinterval_secs) != 0) {
+			LOG("setsockopt(TCP_KEEPINTVL) failed: %s", strerror(errno));
+			return -1;
+		}
+	}
+#endif
+
+#if defined(TCP_KEEPCNT)
+	{
+		/* Terminate connection after 3 failed keepalives */
+		const int keepcnt = 3;
+
+		if (set_tcp_sockopt(sockfd, TCP_KEEPCNT, keepcnt) != 0) {
+			LOG("setsockopt(TCP_KEEPCNT) failed: %s", strerror(errno));
+			return -1;
+		}
+	}
+#endif
+
+	return 0;
+}
+#endif /* HAVE_NETINET_TCP_H */
 
 int
 rpc_get_fd(struct rpc_context *rpc)
@@ -708,19 +765,27 @@ maybe_call_connect_cb(struct rpc_context *rpc, int status)
 	tmp_cb(rpc, status, rpc->error_string, rpc->connect_data);
 }
 
-static void
+/*
+ * If it returns -1 it indicates that the timeout scan discovered one or more
+ * RPCs with major timeout and caller must terminate the connection to try fix
+ * things.
+ */
+static int
 rpc_timeout_scan(struct rpc_context *rpc)
 {
 	struct rpc_pdu *pdu;
 	struct rpc_pdu *next_pdu;
 	uint64_t t = rpc_current_time();
 	unsigned int i;
+	/* Milliseconds since last successful RPC response on this transport */
+	const int last_rpc_msecs = (t - rpc->last_successful_rpc_response);
+	bool_t need_reconnect = FALSE;
 
         /*
          * Only scan once per second.
          */
         if (t <= rpc->last_timeout_scan + 1000) {
-                return;
+                return 0;
         }
         rpc->last_timeout_scan = t;
 
@@ -758,6 +823,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 					pdu->snr_logged = TRUE;
 					RPC_LOG(rpc, 1, "Server %s not responding, still trying",
 						rpc->server);
+				}
+				if (!need_reconnect) {
+					need_reconnect = (last_rpc_msecs > rpc->timeout);
 				}
 			}
 			/* Reset the RPC timeout values as appropriate */
@@ -812,6 +880,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 						RPC_LOG(rpc, 1, "Server %s not responding, "
 								"still trying", rpc->server);
 					}
+					if (!need_reconnect) {
+						need_reconnect = (last_rpc_msecs > rpc->timeout);
+					}
 				}
 				/* Reset the RPC timeout values as appropriate */
 				pdu_set_timeout(rpc, pdu, t);
@@ -833,6 +904,13 @@ rpc_timeout_scan(struct rpc_context *rpc)
                 nfs_mt_mutex_unlock(&rpc->rpc_mutex);
         }
 #endif /* HAVE_MULTITHREADING */
+
+	if (need_reconnect) {
+		RPC_LOG(rpc, 2, "rpc_timeout_scan: Recovery action needed for fd %d",
+			rpc->fd);
+	}
+
+	return (need_reconnect ? -1 : 0);
 }
 
 int
@@ -840,7 +918,15 @@ rpc_service(struct rpc_context *rpc, int revents)
 {
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-	rpc_timeout_scan(rpc);
+	/*
+	 * rpc_timeout_scan() will return non-zero to indicate that we need to
+	 * perform recovery action by reconnecting and queueing all RPCs on the
+	 * new connection. Schedule reconnect and requeue and return. Once the
+	 * new connection is ready, events will be processed for that.
+	 */
+	if (rpc_timeout_scan(rpc) != 0) {
+		return rpc_reconnect_requeue(rpc);
+	}
 
 	if (revents == -1 || revents & (POLLERR|POLLHUP)) {
 		if (revents != -1 && revents & POLLERR) {
@@ -1004,6 +1090,7 @@ rpc_service_ex(struct rpc_context *rpc)
 {
 	struct pollfd pfds[1]; /* nfs:0 */
 	int ret;
+	int errno_saved;
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
@@ -1014,22 +1101,30 @@ rpc_service_ex(struct rpc_context *rpc)
 
 	/*
 	 * Note that even when poll() fails or times out we still must scan
-	 * queued RPCs to see if any of them has timed out.
+	 * queued RPCs to see if any of them has timed out and/or we need to
+	 * take other recovery actions like terminating the connection.
 	 */
 	if (ret < 0) {
+		errno_saved = errno;
 		RPC_LOG(rpc, 1, "Poll failed: %s", strerror(errno));
-		rpc_timeout_scan(rpc);
+		if (rpc_timeout_scan(rpc) != 0) {
+			(void) rpc_reconnect_requeue(rpc);
+		}
+		errno = errno_saved;
 		return -1;
 	} else if (ret == 0) {
 		RPC_LOG(rpc, 3, "Poll timedout after %d msecs", rpc_get_poll_timeout(rpc));
+		if (rpc_timeout_scan(rpc) != 0) {
+			(void) rpc_reconnect_requeue(rpc);
+		}
 		errno = EAGAIN;
-		rpc_timeout_scan(rpc);
 		return -1;
 	}
 
 	return rpc_service(rpc, pfds[0].revents);
 }
 
+#if 0
 void
 rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
 {
@@ -1042,13 +1137,18 @@ rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
 
 	rpc->auto_reconnect = num_retries;
 }
+#endif
 
 /*
  * Set resiliency related paramters for the RPC context.
  * Following are the resiliency characteristics for RPC transport:
- * 1. Number of times 
- * 1. RPC timeout time.
- * 2. RPC retransmit count after which we run the "major timeout".
+ * 1. num_tcp_reconnect:
+ *    Number of times TCP reconnection is allowed before giving up.
+ * 2. timeout:
+ *    How long we wait for an RPC response before retrying the RPC?
+ * 3. retrans:
+ *    Number of times an RPC is retried before we consider it a "major timeout"
+ *    and take further recovery actions which might involve reconnection.
  */
 void
 rpc_set_resiliency(struct rpc_context *rpc,
@@ -1164,16 +1264,16 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 	 */
 	{
 		struct sockaddr_storage ss;
-        struct sockaddr_in *sin;
+		struct sockaddr_in *sin;
 #if !defined(PS3_PPU) && !defined(PS2_EE)		
-        struct sockaddr_in6 *sin6;
+		struct sockaddr_in6 *sin6;
 #endif
 		static int portOfs = 0;
 		const int firstPort = 512; /* >= 512 according to Sun docs */
 		const int portCount = IPPORT_RESERVED - firstPort;
 		int startOfs, port, rc;
 
-        sin  = (struct sockaddr_in *)&ss;
+		sin  = (struct sockaddr_in *)&ss;
 #if !defined(PS3_PPU) && !defined(PS2_EE)        
 		sin6 = (struct sockaddr_in6 *)&ss;
 #endif
@@ -1224,6 +1324,18 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 
 	rpc->is_nonblocking = !set_nonblocking(rpc->fd);
 	set_nolinger(rpc->fd);
+
+#ifdef HAVE_NETINET_TCP_H
+	/*
+	 * Enable keepalive to detect and terminate dead connections when server
+	 * TCP stops responding.
+	 */
+	if (set_keepalive(rpc->fd) != 0) {
+		rpc_set_error(rpc, "Cannot enable keepalive: %s",
+                              strerror(errno));
+		return -1;
+	}
+#endif
 
 	if (connect(rpc->fd, (struct sockaddr *)s, socksize) != 0 &&
             errno != EINPROGRESS) {
@@ -1326,9 +1438,13 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 	if (!rpc->is_connected) {
 		return 0;
 	}
+
+#if 0
 	/* Disable autoreconnect */
 	rpc_set_autoreconnect(rpc, 0);
-
+#else
+	rpc_set_resiliency(rpc, 0, rpc->timeout, 0);
+#endif
 	rpc->is_connected = 0;
 
         if (!rpc->is_server_context) {

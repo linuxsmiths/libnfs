@@ -762,11 +762,12 @@ nfs3_mount_5_cb(struct rpc_context *rpc, int status, void *command_data,
 		return;
 	}
 
+#if 0
 	/* NFS TCP: As we are connected now we can pass on the auto-reconnect
 	 * settings to the RPC layer.
          */
 	rpc_set_autoreconnect(rpc, nfs->nfsi->auto_reconnect);
-
+#endif
 	args.fsroot.data.data_len = nfs->nfsi->rootfh.len;
 	args.fsroot.data.data_val = nfs->nfsi->rootfh.val;
 	if (rpc_nfs3_fsinfo_task(rpc, nfs3_mount_6_cb, &args, data) == NULL) {

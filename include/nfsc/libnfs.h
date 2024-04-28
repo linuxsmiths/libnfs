@@ -124,6 +124,13 @@ struct utimbuf {
 EXTERN int nfs_get_fd(struct nfs_context *nfs);
 EXTERN int nfs_which_events(struct nfs_context *nfs);
 EXTERN int nfs_service(struct nfs_context *nfs, int revents);
+
+/*
+ * nfs_service_ex() is the new extended version of nfs_service() which handles
+ * events, RPC retries, reconnects, automatically.
+ *
+ * New code must use this function instead of rpc_service().
+ */
 EXTERN int nfs_service_ex(struct nfs_context *nfs);
 
 /*

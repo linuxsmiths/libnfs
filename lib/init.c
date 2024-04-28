@@ -163,9 +163,16 @@ struct rpc_context *rpc_init_context(void)
 	 * Default RPC timeout is 60 secs, but it will later be updated if user
 	 * has passed the timeo=<int> mount option. Another way to set the RPC
 	 * timeout is by calling the nfs_set_timeout()/rpc_set_timeout()
-	 * function but the mount option is preferable.
+	 * function but the mount option should be prefered by new users.
 	 */
 	rpc->timeout = 60 * 1000;
+
+	/*
+	 * Default value of retrans starts as 0, i.e., no retries.
+	 * Only after mount completes successfully and the rpc_context is used
+	 * for NFS requests, do we set rpc->retrans to the value set by retrans=<int>
+	 * mount parameter. See rpc_set_resiliency().
+	 */
 	rpc->retrans = 0;
 
 	/* Default is to timeout after 100ms of poll(2) */
@@ -501,13 +508,6 @@ int rpc_get_timeout(struct rpc_context *rpc)
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	return rpc->timeout;
-}
-
-void rpc_set_retrans(struct rpc_context *rpc, int retrans)
-{
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
-
-	rpc->retrans = retrans;
 }
 
 int rpc_register_service(struct rpc_context *rpc, int program, int version,

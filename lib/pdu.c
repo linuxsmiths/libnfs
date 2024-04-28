@@ -667,6 +667,9 @@ static int rpc_process_reply(struct rpc_context *rpc, ZDR *zdr)
 	}
 	switch (msg.body.rbody.reply.areply.stat) {
 	case SUCCESS:
+		/* Last RPC response time for tracking RPC transport health */
+		rpc->last_successful_rpc_response = rpc_current_time();
+
                 if (pdu->in.buf) {
                         rpc->pdu->free_pdu = 1;
                         break;
