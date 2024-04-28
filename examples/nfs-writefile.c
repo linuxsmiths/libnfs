@@ -306,16 +306,10 @@ int main(int argc, char *argv[])
 	 * or fails.
 	 */
 	while (ctx->status == 0) {
-		struct pollfd pfds[1]; /* nfs:0 */
-
-		pfds[0].fd = nfs_get_fd(ctx->nfs);
-		pfds[0].events = nfs_which_events(ctx->nfs);
-
-		if (poll(&pfds[0], 1, -1) < 0) {
-			printf("Poll failed");
-			break;
-		}
-		if (nfs_service(ctx->nfs, pfds[0].revents) < 0) {
+		if (nfs_service_ex(ctx->nfs) < 0) {
+			if (errno == EAGAIN || errno == EINTR) {
+				continue;
+			}
 			printf("nfs_service failed\n");
 			break;
 		}

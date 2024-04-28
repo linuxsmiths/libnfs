@@ -211,6 +211,12 @@ nfs_service(struct nfs_context *nfs, int revents)
 	return rpc_service(nfs->rpc, revents);
 }
 
+int
+nfs_service_ex(struct nfs_context *nfs)
+{
+	return rpc_service_ex(nfs->rpc);
+}
+
 char *
 nfs_get_error(struct nfs_context *nfs)
 {

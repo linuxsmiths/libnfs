@@ -124,6 +124,7 @@ struct utimbuf {
 EXTERN int nfs_get_fd(struct nfs_context *nfs);
 EXTERN int nfs_which_events(struct nfs_context *nfs);
 EXTERN int nfs_service(struct nfs_context *nfs, int revents);
+EXTERN int nfs_service_ex(struct nfs_context *nfs);
 
 /*
  * Returns the number of commands in-flight. Can be used by the application

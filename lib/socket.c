@@ -999,6 +999,31 @@ rpc_service(struct rpc_context *rpc, int revents)
 	return 0;
 }
 
+int
+rpc_service_ex(struct rpc_context *rpc)
+{
+	struct pollfd pfds[1]; /* nfs:0 */
+	int ret;
+
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	pfds[0].fd = rpc_get_fd(rpc);
+	pfds[0].events = rpc_which_events(rpc);
+
+	ret = poll(&pfds[0], 1, rpc_get_poll_timeout(rpc));
+
+	if (ret < 0) {
+		RPC_LOG(rpc, 1, "Poll failed: %s", strerror(errno));
+		return -1;
+	} else if (ret == 0) {
+		RPC_LOG(rpc, 3, "Poll timedout after %d msecs", rpc_get_poll_timeout(rpc));
+		errno = EAGAIN;
+		return -1;
+	}
+
+	return rpc_service(rpc, pfds[0].revents);
+}
+
 void
 rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
 {
