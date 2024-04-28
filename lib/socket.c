@@ -1085,45 +1085,6 @@ rpc_service(struct rpc_context *rpc, int revents)
 	return 0;
 }
 
-int
-rpc_service_ex(struct rpc_context *rpc)
-{
-	struct pollfd pfds[1]; /* nfs:0 */
-	int ret;
-	int errno_saved;
-
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
-
-	pfds[0].fd = rpc_get_fd(rpc);
-	pfds[0].events = rpc_which_events(rpc);
-
-	ret = poll(&pfds[0], 1, rpc_get_poll_timeout(rpc));
-
-	/*
-	 * Note that even when poll() fails or times out we still must scan
-	 * queued RPCs to see if any of them has timed out and/or we need to
-	 * take other recovery actions like terminating the connection.
-	 */
-	if (ret < 0) {
-		errno_saved = errno;
-		RPC_LOG(rpc, 1, "Poll failed: %s", strerror(errno));
-		if (rpc_timeout_scan(rpc) != 0) {
-			(void) rpc_reconnect_requeue(rpc);
-		}
-		errno = errno_saved;
-		return -1;
-	} else if (ret == 0) {
-		RPC_LOG(rpc, 3, "Poll timedout after %d msecs", rpc_get_poll_timeout(rpc));
-		if (rpc_timeout_scan(rpc) != 0) {
-			(void) rpc_reconnect_requeue(rpc);
-		}
-		errno = EAGAIN;
-		return -1;
-	}
-
-	return rpc_service(rpc, pfds[0].revents);
-}
-
 #if 0
 void
 rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
