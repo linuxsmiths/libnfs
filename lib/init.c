@@ -166,7 +166,7 @@ struct rpc_context *rpc_init_context(void)
 	 * function but the mount option is preferable.
 	 */
 	rpc->timeout = 60 * 1000;
-	rpc->retrans = 2;
+	rpc->retrans = 0;
 
 	/* Default is to timeout after 100ms of poll(2) */
 	rpc->poll_timeout = 100;

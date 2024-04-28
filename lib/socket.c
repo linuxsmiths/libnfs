@@ -1012,12 +1012,18 @@ rpc_service_ex(struct rpc_context *rpc)
 
 	ret = poll(&pfds[0], 1, rpc_get_poll_timeout(rpc));
 
+	/*
+	 * Note that even when poll() fails or times out we still must scan
+	 * queued RPCs to see if any of them has timed out.
+	 */
 	if (ret < 0) {
 		RPC_LOG(rpc, 1, "Poll failed: %s", strerror(errno));
+		rpc_timeout_scan(rpc);
 		return -1;
 	} else if (ret == 0) {
 		RPC_LOG(rpc, 3, "Poll timedout after %d msecs", rpc_get_poll_timeout(rpc));
 		errno = EAGAIN;
+		rpc_timeout_scan(rpc);
 		return -1;
 	}
 
@@ -1036,6 +1042,32 @@ rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries)
 
 	rpc->auto_reconnect = num_retries;
 }
+
+/*
+ * Set resiliency related paramters for the RPC context.
+ * Following are the resiliency characteristics for RPC transport:
+ * 1. Number of times 
+ * 1. RPC timeout time.
+ * 2. RPC retransmit count after which we run the "major timeout".
+ */
+void
+rpc_set_resiliency(struct rpc_context *rpc,
+		   int num_tcp_reconnect,
+		   int timeout,
+		   int retrans)
+{
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+        /* we can not connect and not reconnect on a server context. */
+        if (rpc->is_server_context) {
+                return;
+        }
+
+	rpc->auto_reconnect = num_tcp_reconnect;
+	rpc->timeout = timeout;
+	rpc->retrans = retrans;
+}
+
 
 void
 rpc_set_tcp_syncnt(struct rpc_context *rpc, int v)

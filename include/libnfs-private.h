@@ -488,6 +488,10 @@ struct rpc_context *rpc_init_udp_context(void);
 struct sockaddr *rpc_get_recv_sockaddr(struct rpc_context *rpc);
 
 void rpc_set_autoreconnect(struct rpc_context *rpc, int num_retries);
+void rpc_set_resiliency(struct rpc_context *rpc,
+			int num_tcp_reconnect,
+			int timeout,
+			int retrans);
 
 void rpc_set_interface(struct rpc_context *rpc, const char *ifname);
 

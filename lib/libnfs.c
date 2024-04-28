@@ -259,9 +259,9 @@ nfs_set_context_args(struct nfs_context *nfs, const char *arg, const char *val)
 			nfs_set_error(nfs, "timeo (%s) cannot be less than 100", val);
 			return -1;
 		}
-		rpc_set_timeout(nfs_get_rpc_context(nfs), timeout_msecs);
+		nfs_set_timeout(nfs, timeout_msecs);
 	} else if (!strcmp(arg, "retrans")) {
-		rpc_set_retrans(nfs_get_rpc_context(nfs), atoi(val));
+		nfs_set_retrans(nfs, atoi(val));
 	} else if (!strcmp(arg, "debug")) {
 		rpc_set_debug(nfs_get_rpc_context(nfs), atoi(val));
 	} else if (!strcmp(arg, "auto-traverse-mounts")) {
@@ -583,8 +583,22 @@ nfs_init_context(void)
 	nfs->nfsi->mask = 022;
 	nfs->nfsi->auto_traverse_mounts = 1;
 	nfs->nfsi->dircache_enabled = 1;
-	/* Default is never give up, never surrender */
+	
+	/*
+	 * Default resiliency parameters are chosen with safe values that
+	 * emulate "hard" mount, which means on any error (RPC or TCP) keep
+	 * trying indefinitely.
+	 * 
+	 * TCP reconnect is indefinitely tried, RPC requests time out after
+	 * 60 secs and we retry an RPC request 2 times before declaring it as
+	 * "major timeout" and running the major timeout recovery workflow,
+	 * after which the whole RPC retransmit cycle restarts and this continues
+	 * indefinitely.
+	 */
 	nfs->nfsi->auto_reconnect = -1;
+	nfs->nfsi->timeout = 60*1000;
+	nfs->nfsi->retrans = 2;
+
 	nfs->nfsi->default_version = NFS_V3;
 	nfs->nfsi->version = NFS_V3;
 	nfs->nfsi->readdir_dircount = 8192;
@@ -2148,6 +2162,11 @@ nfs_set_autoreconnect(struct nfs_context *nfs, int num_retries) {
 	nfs->nfsi->auto_reconnect = num_retries;
 }
 
+void
+nfs_set_retrans(struct nfs_context *nfs, int retrans) {
+	nfs->nfsi->retrans = retrans;
+}
+
 int
 nfs_set_version(struct nfs_context *nfs, int version) {
 	switch (version) {
@@ -2365,9 +2384,10 @@ nfs_get_poll_timeout(struct nfs_context *nfs)
 * Sets timeout for nfs apis
 */
 void
-nfs_set_timeout(struct nfs_context *nfs,int timeout)
+nfs_set_timeout(struct nfs_context *nfs, int timeout)
 {
-	rpc_set_timeout(nfs->rpc,timeout);
+	nfs->nfsi->timeout = timeout;
+	rpc_set_timeout(nfs->rpc, timeout);
 }
 
 /*
