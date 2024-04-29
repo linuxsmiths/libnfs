@@ -235,6 +235,7 @@ nfs_mount_cb(int status, struct nfs_context *nfs, void *data,
 int main(int argc, char *argv[])
 {
 	struct write_file_context *ctx = NULL;
+	int ret;
 
 #ifdef WIN32
 	if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
@@ -330,6 +331,8 @@ int main(int argc, char *argv[])
 		printf("Failed\n");
 	}
 
+	ret = (ctx->status > 0) ? 0 : -1;
+
 	free_write_file_context(ctx);
-	return (ctx->status > 0) ? 0 : -1;
+	return ret;
 }
