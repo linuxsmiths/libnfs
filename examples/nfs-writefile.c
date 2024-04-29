@@ -331,5 +331,5 @@ int main(int argc, char *argv[])
 	}
 
 	free_write_file_context(ctx);
-	return 0;
+	return (ctx->status > 0) ? 0 : -1;
 }
