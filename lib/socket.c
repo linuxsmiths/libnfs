@@ -892,7 +892,9 @@ rpc_timeout_scan(struct rpc_context *rpc)
 				pdu_set_timeout(rpc, pdu, t);
 
 				/* queue it back to outqueue for retransmit */
-				rpc_enqueue(&rpc->outqueue, pdu);
+				rpc_return_to_queue(&rpc->outqueue, pdu);
+				/* we have to re-send the whole pdu again */
+				pdu->out.num_done = 0;
 			} else {
 				// qqq move to a temporary queue and process after
 				// we drop the mutex
