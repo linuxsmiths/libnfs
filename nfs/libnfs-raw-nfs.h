@@ -56,7 +56,7 @@ typedef uint64_t cookie3;
 
 struct nfs_fh3 {
 	struct {
-		uint32_t data_len;
+		u_int data_len;
 		char *data_val;
 	} data;
 };
@@ -81,32 +81,32 @@ enum ftype3 {
 };
 typedef enum ftype3 ftype3;
 
-typedef uint32_t mode3;
+typedef u_int mode3;
 
-typedef uint32_t uid3;
+typedef u_int uid3;
 
-typedef uint32_t gid3;
+typedef u_int gid3;
 
 typedef uint64_t size3;
 
 typedef uint64_t fileid3;
 
 struct specdata3 {
-	uint32_t specdata1;
-	uint32_t specdata2;
+	u_int specdata1;
+	u_int specdata2;
 };
 typedef struct specdata3 specdata3;
 
 struct nfstime3 {
-	uint32_t seconds;
-	uint32_t nseconds;
+	u_int seconds;
+	u_int nseconds;
 };
 typedef struct nfstime3 nfstime3;
 
 struct fattr3 {
 	ftype3 type;
 	mode3 mode;
-	uint32_t nlink;
+	u_int nlink;
 	uid3 uid;
 	gid3 gid;
 	size3 size;
@@ -170,7 +170,7 @@ typedef enum stable_how stable_how;
 
 typedef uint64_t offset3;
 
-typedef uint32_t count3;
+typedef u_int count3;
 
 struct wcc_attr {
 	size3 size;
@@ -199,7 +199,7 @@ struct WRITE3args {
 	count3 count;
 	stable_how stable;
 	struct {
-		uint32_t data_len;
+		u_int data_len;
 		char *data_val;
 	} data;
 };
@@ -281,6 +281,28 @@ struct COMMIT3res {
 	} COMMIT3res_u;
 };
 typedef struct COMMIT3res COMMIT3res;
+
+struct AZAUTH3args {
+	char *authdata;
+	char *client_version;
+	char *clientid;
+	char *authtype;
+};
+typedef struct AZAUTH3args AZAUTH3args;
+
+struct AZAUTH3resok {
+	char *server_version;
+	char *serverid;
+};
+typedef struct AZAUTH3resok AZAUTH3resok;
+
+struct AZAUTH3res {
+	nfsstat3 status;
+	union {
+		AZAUTH3resok resok;
+	} AZAUTH3res_u;
+};
+typedef struct AZAUTH3res AZAUTH3res;
 #define ACCESS3_READ 0x0001
 #define ACCESS3_LOOKUP 0x0002
 #define ACCESS3_MODIFY 0x0004
@@ -290,13 +312,13 @@ typedef struct COMMIT3res COMMIT3res;
 
 struct ACCESS3args {
 	nfs_fh3 object;
-	uint32_t access;
+	u_int access;
 };
 typedef struct ACCESS3args ACCESS3args;
 
 struct ACCESS3resok {
 	post_op_attr obj_attributes;
-	uint32_t access;
+	u_int access;
 };
 typedef struct ACCESS3resok ACCESS3resok;
 
@@ -487,7 +509,7 @@ struct READ3resok {
 	count3 count;
 	uint32_t eof;
 	struct {
-		uint32_t data_len;
+		u_int data_len;
 		char *data_val;
 	} data;
 };
@@ -518,16 +540,16 @@ typedef struct FSINFO3args FSINFO3args;
 
 struct FSINFO3resok {
 	post_op_attr obj_attributes;
-	uint32_t rtmax;
-	uint32_t rtpref;
-	uint32_t rtmult;
-	uint32_t wtmax;
-	uint32_t wtpref;
-	uint32_t wtmult;
-	uint32_t dtpref;
+	u_int rtmax;
+	u_int rtpref;
+	u_int rtmult;
+	u_int wtmax;
+	u_int wtpref;
+	u_int wtmult;
+	u_int dtpref;
 	size3 maxfilesize;
 	nfstime3 time_delta;
-	uint32_t properties;
+	u_int properties;
 };
 typedef struct FSINFO3resok FSINFO3resok;
 
@@ -558,7 +580,7 @@ struct FSSTAT3resok {
 	size3 tfiles;
 	size3 ffiles;
 	size3 afiles;
-	uint32_t invarsec;
+	u_int invarsec;
 };
 typedef struct FSSTAT3resok FSSTAT3resok;
 
@@ -583,8 +605,8 @@ typedef struct PATHCONF3args PATHCONF3args;
 
 struct PATHCONF3resok {
 	post_op_attr obj_attributes;
-	uint32_t linkmax;
-	uint32_t name_max;
+	u_int linkmax;
+	u_int name_max;
 	uint32_t no_trunc;
 	uint32_t chown_restricted;
 	uint32_t case_insensitive;
@@ -953,16 +975,16 @@ typedef enum ftype2 ftype2;
 
 struct fattr2 {
 	ftype2 type;
-	uint32_t mode;
-	uint32_t nlink;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t size;
-	uint32_t blocksize;
-	uint32_t rdev;
-	uint32_t blocks;
-	uint32_t fsid;
-	uint32_t fileid;
+	u_int mode;
+	u_int nlink;
+	u_int uid;
+	u_int gid;
+	u_int size;
+	u_int blocksize;
+	u_int rdev;
+	u_int blocks;
+	u_int fsid;
+	u_int fileid;
 	nfstime3 atime;
 	nfstime3 mtime;
 	nfstime3 ctime;
@@ -970,10 +992,10 @@ struct fattr2 {
 typedef struct fattr2 fattr2;
 
 struct sattr2 {
-	uint32_t mode;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t size;
+	u_int mode;
+	u_int uid;
+	u_int gid;
+	u_int size;
 	nfstime3 atime;
 	nfstime3 mtime;
 };
@@ -987,7 +1009,7 @@ typedef char *path2;
 #define NFSMAXDATA2 8192
 
 typedef struct {
-	uint32_t nfsdata2_len;
+	u_int nfsdata2_len;
 	char *nfsdata2_val;
 } nfsdata2;
 #define NFSCOOKIESIZE2 4
@@ -995,7 +1017,7 @@ typedef struct {
 typedef char nfscookie2[NFSCOOKIESIZE2];
 
 struct entry2 {
-	uint32_t fileid;
+	u_int fileid;
 	filename2 name;
 	nfscookie2 cookie;
 	struct entry2 *nextentry;
@@ -1084,9 +1106,9 @@ typedef struct READLINK2res READLINK2res;
 
 struct READ2args {
 	fhandle2 file;
-	uint32_t offset;
-	uint32_t count;
-	uint32_t totalcount;
+	u_int offset;
+	u_int count;
+	u_int totalcount;
 };
 typedef struct READ2args READ2args;
 
@@ -1106,9 +1128,9 @@ typedef struct READ2res READ2res;
 
 struct WRITE2args {
 	fhandle2 file;
-	uint32_t beginoffset;
-	uint32_t offset;
-	uint32_t totalcount;
+	u_int beginoffset;
+	u_int offset;
+	u_int totalcount;
 	nfsdata2 data;
 };
 typedef struct WRITE2args WRITE2args;
@@ -1223,7 +1245,7 @@ typedef struct RMDIR2res RMDIR2res;
 struct READDIR2args {
 	fhandle2 dir;
 	nfscookie2 cookie;
-	uint32_t count;
+	u_int count;
 };
 typedef struct READDIR2args READDIR2args;
 
@@ -1247,11 +1269,11 @@ struct STATFS2args {
 typedef struct STATFS2args STATFS2args;
 
 struct STATFS2resok {
-	uint32_t tsize;
-	uint32_t bsize;
-	uint32_t blocks;
-	uint32_t bfree;
-	uint32_t bavail;
+	u_int tsize;
+	u_int bsize;
+	u_int blocks;
+	u_int bfree;
+	u_int bavail;
 };
 typedef struct STATFS2resok STATFS2resok;
 
@@ -1285,8 +1307,8 @@ typedef enum nfsacl_type nfsacl_type;
 
 struct nfsacl_ace {
 	enum nfsacl_type type;
-	uint32_t id;
-	uint32_t perm;
+	u_int id;
+	u_int perm;
 };
 typedef struct nfsacl_ace nfsacl_ace;
 #define NFSACL_MASK_ACL_ENTRY 0x0001
@@ -1296,21 +1318,21 @@ typedef struct nfsacl_ace nfsacl_ace;
 
 struct GETACL3args {
 	nfs_fh3 dir;
-	uint32_t mask;
+	u_int mask;
 };
 typedef struct GETACL3args GETACL3args;
 
 struct GETACL3resok {
 	post_op_attr attr;
-	uint32_t mask;
-	uint32_t ace_count;
+	u_int mask;
+	u_int ace_count;
 	struct {
-		uint32_t ace_len;
+		u_int ace_len;
 		struct nfsacl_ace *ace_val;
 	} ace;
-	uint32_t default_ace_count;
+	u_int default_ace_count;
 	struct {
-		uint32_t default_ace_len;
+		u_int default_ace_len;
 		struct nfsacl_ace *default_ace_val;
 	} default_ace;
 };
@@ -1326,15 +1348,15 @@ typedef struct GETACL3res GETACL3res;
 
 struct SETACL3args {
 	nfs_fh3 dir;
-	uint32_t mask;
-	uint32_t ace_count;
+	u_int mask;
+	u_int ace_count;
 	struct {
-		uint32_t ace_len;
+		u_int ace_len;
 		struct nfsacl_ace *ace_val;
 	} ace;
-	uint32_t default_ace_count;
+	u_int default_ace_count;
 	struct {
-		uint32_t default_ace_len;
+		u_int default_ace_len;
 		struct nfsacl_ace *default_ace_val;
 	} default_ace;
 };
@@ -1527,6 +1549,9 @@ extern  PATHCONF3res * nfs3_pathconf_3_svc(PATHCONF3args *, struct svc_req *);
 #define NFS3_COMMIT 21
 extern  COMMIT3res * nfs3_commit_3(COMMIT3args *, void *);
 extern  COMMIT3res * nfs3_commit_3_svc(COMMIT3args *, struct svc_req *);
+#define NFS3_AZAUTH 23
+extern  AZAUTH3res * nfs3_azauth_3(AZAUTH3args *, void *);
+extern  AZAUTH3res * nfs3_azauth_3_svc(AZAUTH3args *, struct svc_req *);
 extern int nfs_program_3_freeresult (void *, zdrproc_t, caddr_t);
 
 #else /* K&R C */
@@ -1596,6 +1621,9 @@ extern  PATHCONF3res * nfs3_pathconf_3_svc();
 #define NFS3_COMMIT 21
 extern  COMMIT3res * nfs3_commit_3();
 extern  COMMIT3res * nfs3_commit_3_svc();
+#define NFS3_AZAUTH 23
+extern  AZAUTH3res * nfs3_azauth_3();
+extern  AZAUTH3res * nfs3_azauth_3_svc();
 extern int nfs_program_3_freeresult ();
 #endif /* K&R C */
 
@@ -1665,6 +1693,9 @@ extern  uint32_t zdr_COMMIT3args (ZDR *, COMMIT3args*);
 extern  uint32_t zdr_COMMIT3resok (ZDR *, COMMIT3resok*);
 extern  uint32_t zdr_COMMIT3resfail (ZDR *, COMMIT3resfail*);
 extern  uint32_t zdr_COMMIT3res (ZDR *, COMMIT3res*);
+extern  uint32_t zdr_AZAUTH3args (ZDR *, AZAUTH3args*);
+extern  uint32_t zdr_AZAUTH3resok (ZDR *, AZAUTH3resok*);
+extern  uint32_t zdr_AZAUTH3res (ZDR *, AZAUTH3res*);
 extern  uint32_t zdr_ACCESS3args (ZDR *, ACCESS3args*);
 extern  uint32_t zdr_ACCESS3resok (ZDR *, ACCESS3resok*);
 extern  uint32_t zdr_ACCESS3resfail (ZDR *, ACCESS3resfail*);
@@ -1852,6 +1883,9 @@ extern uint32_t zdr_COMMIT3args ();
 extern uint32_t zdr_COMMIT3resok ();
 extern uint32_t zdr_COMMIT3resfail ();
 extern uint32_t zdr_COMMIT3res ();
+extern uint32_t zdr_AZAUTH3args ();
+extern uint32_t zdr_AZAUTH3resok ();
+extern uint32_t zdr_AZAUTH3res ();
 extern uint32_t zdr_ACCESS3args ();
 extern uint32_t zdr_ACCESS3resok ();
 extern uint32_t zdr_ACCESS3resfail ();
@@ -2016,9 +2050,9 @@ extern uint32_t zdr_SETACL3res ();
 #endif
 
 typedef struct {
-        uint32_t ace_count;
+        u_int ace_count;
         struct nfsacl_ace *ace;
-        uint32_t default_ace_count;
+        u_int default_ace_count;
         struct nfsacl_ace *default_ace;
 } fattr3_acl;
 
