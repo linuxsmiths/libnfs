@@ -1,5 +1,5 @@
 /*
-yCopyright (c) 2014, Ronnie Sahlberg
+Copyright (c) 2014, Ronnie Sahlberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
