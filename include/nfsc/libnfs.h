@@ -960,7 +960,6 @@ EXTERN int nfs_fcntl(struct nfs_context *nfs, struct nfsfh *nfsfh,
  */
 EXTERN int nfs_fsync_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                            nfs_cb cb, void *private_data);
-
 /*
  * Sync fsync()
  * Function returns
