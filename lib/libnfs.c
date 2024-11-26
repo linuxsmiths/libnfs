@@ -1587,22 +1587,6 @@ nfs_fsync_async(struct nfs_context *nfs, struct nfsfh *nfsfh, nfs_cb cb,
 }
 
 int
-nfs_azauth_async(struct nfs_context *nfs, char *client_version, char *clientid, 
-				 char *authtype, char *auth_data, nfs_cb cb,
-                 void *private_data)
-{
-	switch (nfs->nfsi->version) {
-        case NFS_V3:
-                return nfs3_azauth_async(nfs, client_version, clientid, authtype,
-				 auth_data, cb, private_data);
-        default:
-                nfs_set_error(nfs, "%s does not support NFSv%d",
-                              __FUNCTION__, nfs->nfsi->version);
-                return -1;
-        }
-}
-
-int
 nfs_ftruncate_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                     uint64_t length, nfs_cb cb, void *private_data)
 {

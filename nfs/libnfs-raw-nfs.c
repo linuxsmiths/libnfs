@@ -38,8 +38,6 @@ either expressed or implied, of the FreeBSD Project.
 uint32_t
 zdr_cookieverf3 (ZDR *zdrs, cookieverf3 objp)
 {
-	register int32_t *buf;
- buf = NULL;
 
 	 if (!zdr_opaque (zdrs, objp, NFS3_COOKIEVERFSIZE))
 		 return FALSE;
@@ -49,9 +47,6 @@ zdr_cookieverf3 (ZDR *zdrs, cookieverf3 objp)
 uint32_t
 zdr_cookie3 (ZDR *zdrs, cookie3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_uint64_t (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -60,9 +55,6 @@ zdr_cookie3 (ZDR *zdrs, cookie3 *objp)
 uint32_t
 zdr_nfs_fh3 (ZDR *zdrs, nfs_fh3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bytes (zdrs, (char **)&objp->data.data_val, (u_int *) &objp->data.data_len, NFS3_FHSIZE))
 		 return FALSE;
 	return TRUE;
@@ -71,9 +63,6 @@ zdr_nfs_fh3 (ZDR *zdrs, nfs_fh3 *objp)
 uint32_t
 zdr_filename3 (ZDR *zdrs, filename3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, objp, ~0))
 		 return FALSE;
 	return TRUE;
@@ -82,9 +71,6 @@ zdr_filename3 (ZDR *zdrs, filename3 *objp)
 uint32_t
 zdr_diropargs3 (ZDR *zdrs, diropargs3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->dir))
 		 return FALSE;
 	 if (!zdr_filename3 (zdrs, &objp->name))
@@ -95,9 +81,6 @@ zdr_diropargs3 (ZDR *zdrs, diropargs3 *objp)
 uint32_t
 zdr_ftype3 (ZDR *zdrs, ftype3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -106,9 +89,6 @@ zdr_ftype3 (ZDR *zdrs, ftype3 *objp)
 uint32_t
 zdr_mode3 (ZDR *zdrs, mode3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -117,10 +97,7 @@ zdr_mode3 (ZDR *zdrs, mode3 *objp)
 uint32_t
 zdr_uid3 (ZDR *zdrs, uid3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-	 if (!zdr_u_int (zdrs, objp))
+	if (!zdr_u_int (zdrs, objp))
 		 return FALSE;
 	return TRUE;
 }
@@ -128,9 +105,6 @@ zdr_uid3 (ZDR *zdrs, uid3 *objp)
 uint32_t
 zdr_gid3 (ZDR *zdrs, gid3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -139,9 +113,6 @@ zdr_gid3 (ZDR *zdrs, gid3 *objp)
 uint32_t
 zdr_size3 (ZDR *zdrs, size3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_uint64_t (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -150,9 +121,6 @@ zdr_size3 (ZDR *zdrs, size3 *objp)
 uint32_t
 zdr_fileid3 (ZDR *zdrs, fileid3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_uint64_t (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -161,9 +129,6 @@ zdr_fileid3 (ZDR *zdrs, fileid3 *objp)
 uint32_t
 zdr_specdata3 (ZDR *zdrs, specdata3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, &objp->specdata1))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->specdata2))
@@ -174,9 +139,6 @@ zdr_specdata3 (ZDR *zdrs, specdata3 *objp)
 uint32_t
 zdr_nfstime3 (ZDR *zdrs, nfstime3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, &objp->seconds))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->nseconds))
@@ -187,9 +149,6 @@ zdr_nfstime3 (ZDR *zdrs, nfstime3 *objp)
 uint32_t
 zdr_fattr3 (ZDR *zdrs, fattr3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_ftype3 (zdrs, &objp->type))
 		 return FALSE;
 	 if (!zdr_mode3 (zdrs, &objp->mode))
@@ -222,9 +181,6 @@ zdr_fattr3 (ZDR *zdrs, fattr3 *objp)
 uint32_t
 zdr_post_op_attr (ZDR *zdrs, post_op_attr *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->attributes_follow))
 		 return FALSE;
 	switch (objp->attributes_follow) {
@@ -243,9 +199,6 @@ zdr_post_op_attr (ZDR *zdrs, post_op_attr *objp)
 uint32_t
 zdr_nfsstat3 (ZDR *zdrs, nfsstat3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -254,9 +207,6 @@ zdr_nfsstat3 (ZDR *zdrs, nfsstat3 *objp)
 uint32_t
 zdr_stable_how (ZDR *zdrs, stable_how *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -265,9 +215,6 @@ zdr_stable_how (ZDR *zdrs, stable_how *objp)
 uint32_t
 zdr_offset3 (ZDR *zdrs, offset3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_uint64_t (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -276,9 +223,6 @@ zdr_offset3 (ZDR *zdrs, offset3 *objp)
 uint32_t
 zdr_count3 (ZDR *zdrs, count3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, objp))
 		 return FALSE;
 	return TRUE;
@@ -287,9 +231,6 @@ zdr_count3 (ZDR *zdrs, count3 *objp)
 uint32_t
 zdr_wcc_attr (ZDR *zdrs, wcc_attr *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_size3 (zdrs, &objp->size))
 		 return FALSE;
 	 if (!zdr_nfstime3 (zdrs, &objp->mtime))
@@ -302,9 +243,6 @@ zdr_wcc_attr (ZDR *zdrs, wcc_attr *objp)
 uint32_t
 zdr_pre_op_attr (ZDR *zdrs, pre_op_attr *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->attributes_follow))
 		 return FALSE;
 	switch (objp->attributes_follow) {
@@ -323,9 +261,6 @@ zdr_pre_op_attr (ZDR *zdrs, pre_op_attr *objp)
 uint32_t
 zdr_wcc_data (ZDR *zdrs, wcc_data *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_pre_op_attr (zdrs, &objp->before))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->after))
@@ -336,9 +271,6 @@ zdr_wcc_data (ZDR *zdrs, wcc_data *objp)
 uint32_t
 zdr_WRITE3args (ZDR *zdrs, WRITE3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->file))
 		 return FALSE;
 	 if (!zdr_offset3 (zdrs, &objp->offset))
@@ -355,9 +287,6 @@ zdr_WRITE3args (ZDR *zdrs, WRITE3args *objp)
 uint32_t
 zdr_writeverf3 (ZDR *zdrs, writeverf3 objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_opaque (zdrs, objp, NFS3_WRITEVERFSIZE))
 		 return FALSE;
 	return TRUE;
@@ -366,9 +295,6 @@ zdr_writeverf3 (ZDR *zdrs, writeverf3 objp)
 uint32_t
 zdr_WRITE3resok (ZDR *zdrs, WRITE3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->file_wcc))
 		 return FALSE;
 	 if (!zdr_count3 (zdrs, &objp->count))
@@ -383,9 +309,6 @@ zdr_WRITE3resok (ZDR *zdrs, WRITE3resok *objp)
 uint32_t
 zdr_WRITE3resfail (ZDR *zdrs, WRITE3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->file_wcc))
 		 return FALSE;
 	return TRUE;
@@ -394,9 +317,6 @@ zdr_WRITE3resfail (ZDR *zdrs, WRITE3resfail *objp)
 uint32_t
 zdr_WRITE3res (ZDR *zdrs, WRITE3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -415,9 +335,6 @@ zdr_WRITE3res (ZDR *zdrs, WRITE3res *objp)
 uint32_t
 zdr_LOOKUP3args (ZDR *zdrs, LOOKUP3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->what))
 		 return FALSE;
 	return TRUE;
@@ -426,9 +343,6 @@ zdr_LOOKUP3args (ZDR *zdrs, LOOKUP3args *objp)
 uint32_t
 zdr_LOOKUP3resok (ZDR *zdrs, LOOKUP3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->object))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
@@ -441,9 +355,6 @@ zdr_LOOKUP3resok (ZDR *zdrs, LOOKUP3resok *objp)
 uint32_t
 zdr_LOOKUP3resfail (ZDR *zdrs, LOOKUP3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->dir_attributes))
 		 return FALSE;
 	return TRUE;
@@ -452,9 +363,6 @@ zdr_LOOKUP3resfail (ZDR *zdrs, LOOKUP3resfail *objp)
 uint32_t
 zdr_LOOKUP3res (ZDR *zdrs, LOOKUP3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -473,9 +381,6 @@ zdr_LOOKUP3res (ZDR *zdrs, LOOKUP3res *objp)
 uint32_t
 zdr_COMMIT3args (ZDR *zdrs, COMMIT3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->file))
 		 return FALSE;
 	 if (!zdr_offset3 (zdrs, &objp->offset))
@@ -488,9 +393,6 @@ zdr_COMMIT3args (ZDR *zdrs, COMMIT3args *objp)
 uint32_t
 zdr_COMMIT3resok (ZDR *zdrs, COMMIT3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->file_wcc))
 		 return FALSE;
 	 if (!zdr_writeverf3 (zdrs, objp->verf))
@@ -501,9 +403,6 @@ zdr_COMMIT3resok (ZDR *zdrs, COMMIT3resok *objp)
 uint32_t
 zdr_COMMIT3resfail (ZDR *zdrs, COMMIT3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->file_wcc))
 		 return FALSE;
 	return TRUE;
@@ -512,9 +411,6 @@ zdr_COMMIT3resfail (ZDR *zdrs, COMMIT3resfail *objp)
 uint32_t
 zdr_COMMIT3res (ZDR *zdrs, COMMIT3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -533,9 +429,6 @@ zdr_COMMIT3res (ZDR *zdrs, COMMIT3res *objp)
 uint32_t
 zdr_AZAUTH3args (ZDR *zdrs, AZAUTH3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, &objp->client_version, 16))
 		 return FALSE;
 	 if (!zdr_bytes (zdrs, (char **)&objp->clientid.clientid_val, (u_int *) &objp->clientid.clientid_len, ~0))
@@ -552,9 +445,6 @@ zdr_AZAUTH3args (ZDR *zdrs, AZAUTH3args *objp)
 uint32_t
 zdr_AZAUTH3resok (ZDR *zdrs, AZAUTH3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, &objp->server_version, 16))
 		 return FALSE;
 	 if (!zdr_string (zdrs, &objp->serverid, 8))
@@ -565,9 +455,6 @@ zdr_AZAUTH3resok (ZDR *zdrs, AZAUTH3resok *objp)
 uint32_t
 zdr_AZAUTH3res (ZDR *zdrs, AZAUTH3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -584,9 +471,6 @@ zdr_AZAUTH3res (ZDR *zdrs, AZAUTH3res *objp)
 uint32_t
 zdr_ACCESS3args (ZDR *zdrs, ACCESS3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->object))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->access))
@@ -597,9 +481,6 @@ zdr_ACCESS3args (ZDR *zdrs, ACCESS3args *objp)
 uint32_t
 zdr_ACCESS3resok (ZDR *zdrs, ACCESS3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->access))
@@ -610,9 +491,6 @@ zdr_ACCESS3resok (ZDR *zdrs, ACCESS3resok *objp)
 uint32_t
 zdr_ACCESS3resfail (ZDR *zdrs, ACCESS3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	return TRUE;
@@ -621,9 +499,6 @@ zdr_ACCESS3resfail (ZDR *zdrs, ACCESS3resfail *objp)
 uint32_t
 zdr_ACCESS3res (ZDR *zdrs, ACCESS3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -642,9 +517,6 @@ zdr_ACCESS3res (ZDR *zdrs, ACCESS3res *objp)
 uint32_t
 zdr_GETATTR3args (ZDR *zdrs, GETATTR3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->object))
 		 return FALSE;
 	return TRUE;
@@ -653,9 +525,6 @@ zdr_GETATTR3args (ZDR *zdrs, GETATTR3args *objp)
 uint32_t
 zdr_GETATTR3resok (ZDR *zdrs, GETATTR3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fattr3 (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	return TRUE;
@@ -664,9 +533,6 @@ zdr_GETATTR3resok (ZDR *zdrs, GETATTR3resok *objp)
 uint32_t
 zdr_GETATTR3res (ZDR *zdrs, GETATTR3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -683,9 +549,6 @@ zdr_GETATTR3res (ZDR *zdrs, GETATTR3res *objp)
 uint32_t
 zdr_time_how (ZDR *zdrs, time_how *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -694,9 +557,6 @@ zdr_time_how (ZDR *zdrs, time_how *objp)
 uint32_t
 zdr_set_mode3 (ZDR *zdrs, set_mode3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -713,9 +573,6 @@ zdr_set_mode3 (ZDR *zdrs, set_mode3 *objp)
 uint32_t
 zdr_set_uid3 (ZDR *zdrs, set_uid3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -732,9 +589,6 @@ zdr_set_uid3 (ZDR *zdrs, set_uid3 *objp)
 uint32_t
 zdr_set_gid3 (ZDR *zdrs, set_gid3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -751,9 +605,6 @@ zdr_set_gid3 (ZDR *zdrs, set_gid3 *objp)
 uint32_t
 zdr_set_size3 (ZDR *zdrs, set_size3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -770,9 +621,6 @@ zdr_set_size3 (ZDR *zdrs, set_size3 *objp)
 uint32_t
 zdr_set_atime (ZDR *zdrs, set_atime *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_time_how (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -789,9 +637,6 @@ zdr_set_atime (ZDR *zdrs, set_atime *objp)
 uint32_t
 zdr_set_mtime (ZDR *zdrs, set_mtime *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_time_how (zdrs, &objp->set_it))
 		 return FALSE;
 	switch (objp->set_it) {
@@ -808,9 +653,6 @@ zdr_set_mtime (ZDR *zdrs, set_mtime *objp)
 uint32_t
 zdr_sattr3 (ZDR *zdrs, sattr3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_set_mode3 (zdrs, &objp->mode))
 		 return FALSE;
 	 if (!zdr_set_uid3 (zdrs, &objp->uid))
@@ -829,9 +671,6 @@ zdr_sattr3 (ZDR *zdrs, sattr3 *objp)
 uint32_t
 zdr_createmode3 (ZDR *zdrs, createmode3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -840,9 +679,6 @@ zdr_createmode3 (ZDR *zdrs, createmode3 *objp)
 uint32_t
 zdr_createverf3 (ZDR *zdrs, createverf3 objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_opaque (zdrs, objp, NFS3_CREATEVERFSIZE))
 		 return FALSE;
 	return TRUE;
@@ -851,9 +687,6 @@ zdr_createverf3 (ZDR *zdrs, createverf3 objp)
 uint32_t
 zdr_createhow3 (ZDR *zdrs, createhow3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_createmode3 (zdrs, &objp->mode))
 		 return FALSE;
 	switch (objp->mode) {
@@ -878,9 +711,6 @@ zdr_createhow3 (ZDR *zdrs, createhow3 *objp)
 uint32_t
 zdr_CREATE3args (ZDR *zdrs, CREATE3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_createhow3 (zdrs, &objp->how))
@@ -891,9 +721,6 @@ zdr_CREATE3args (ZDR *zdrs, CREATE3args *objp)
 uint32_t
 zdr_post_op_fh3 (ZDR *zdrs, post_op_fh3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->handle_follows))
 		 return FALSE;
 	switch (objp->handle_follows) {
@@ -912,9 +739,6 @@ zdr_post_op_fh3 (ZDR *zdrs, post_op_fh3 *objp)
 uint32_t
 zdr_CREATE3resok (ZDR *zdrs, CREATE3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_fh3 (zdrs, &objp->obj))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
@@ -927,9 +751,6 @@ zdr_CREATE3resok (ZDR *zdrs, CREATE3resok *objp)
 uint32_t
 zdr_CREATE3resfail (ZDR *zdrs, CREATE3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -938,9 +759,6 @@ zdr_CREATE3resfail (ZDR *zdrs, CREATE3resfail *objp)
 uint32_t
 zdr_CREATE3res (ZDR *zdrs, CREATE3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -959,9 +777,6 @@ zdr_CREATE3res (ZDR *zdrs, CREATE3res *objp)
 uint32_t
 zdr_REMOVE3args (ZDR *zdrs, REMOVE3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->object))
 		 return FALSE;
 	return TRUE;
@@ -970,9 +785,6 @@ zdr_REMOVE3args (ZDR *zdrs, REMOVE3args *objp)
 uint32_t
 zdr_REMOVE3resok (ZDR *zdrs, REMOVE3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -981,9 +793,6 @@ zdr_REMOVE3resok (ZDR *zdrs, REMOVE3resok *objp)
 uint32_t
 zdr_REMOVE3resfail (ZDR *zdrs, REMOVE3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -992,9 +801,6 @@ zdr_REMOVE3resfail (ZDR *zdrs, REMOVE3resfail *objp)
 uint32_t
 zdr_REMOVE3res (ZDR *zdrs, REMOVE3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1013,9 +819,6 @@ zdr_REMOVE3res (ZDR *zdrs, REMOVE3res *objp)
 uint32_t
 zdr_READ3args (ZDR *zdrs, READ3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->file))
 		 return FALSE;
 	 if (!zdr_offset3 (zdrs, &objp->offset))
@@ -1028,9 +831,6 @@ zdr_READ3args (ZDR *zdrs, READ3args *objp)
 uint32_t
 zdr_READ3resok (ZDR *zdrs, READ3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->file_attributes))
 		 return FALSE;
 	 if (!zdr_count3 (zdrs, &objp->count))
@@ -1045,9 +845,6 @@ zdr_READ3resok (ZDR *zdrs, READ3resok *objp)
 uint32_t
 zdr_READ3resfail (ZDR *zdrs, READ3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->file_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1056,9 +853,6 @@ zdr_READ3resfail (ZDR *zdrs, READ3resfail *objp)
 uint32_t
 zdr_READ3res (ZDR *zdrs, READ3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1077,9 +871,6 @@ zdr_READ3res (ZDR *zdrs, READ3res *objp)
 uint32_t
 zdr_FSINFO3args (ZDR *zdrs, FSINFO3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->fsroot))
 		 return FALSE;
 	return TRUE;
@@ -1088,10 +879,6 @@ zdr_FSINFO3args (ZDR *zdrs, FSINFO3args *objp)
 uint32_t
 zdr_FSINFO3resok (ZDR *zdrs, FSINFO3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 			 return FALSE;
@@ -1194,9 +981,6 @@ zdr_FSINFO3resok (ZDR *zdrs, FSINFO3resok *objp)
 uint32_t
 zdr_FSINFO3resfail (ZDR *zdrs, FSINFO3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1205,9 +989,6 @@ zdr_FSINFO3resfail (ZDR *zdrs, FSINFO3resfail *objp)
 uint32_t
 zdr_FSINFO3res (ZDR *zdrs, FSINFO3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1226,9 +1007,6 @@ zdr_FSINFO3res (ZDR *zdrs, FSINFO3res *objp)
 uint32_t
 zdr_FSSTAT3args (ZDR *zdrs, FSSTAT3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->fsroot))
 		 return FALSE;
 	return TRUE;
@@ -1237,9 +1015,6 @@ zdr_FSSTAT3args (ZDR *zdrs, FSSTAT3args *objp)
 uint32_t
 zdr_FSSTAT3resok (ZDR *zdrs, FSSTAT3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	 if (!zdr_size3 (zdrs, &objp->tbytes))
@@ -1262,9 +1037,6 @@ zdr_FSSTAT3resok (ZDR *zdrs, FSSTAT3resok *objp)
 uint32_t
 zdr_FSSTAT3resfail (ZDR *zdrs, FSSTAT3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1273,9 +1045,6 @@ zdr_FSSTAT3resfail (ZDR *zdrs, FSSTAT3resfail *objp)
 uint32_t
 zdr_FSSTAT3res (ZDR *zdrs, FSSTAT3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1294,9 +1063,6 @@ zdr_FSSTAT3res (ZDR *zdrs, FSSTAT3res *objp)
 uint32_t
 zdr_PATHCONF3args (ZDR *zdrs, PATHCONF3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->object))
 		 return FALSE;
 	return TRUE;
@@ -1305,10 +1071,6 @@ zdr_PATHCONF3args (ZDR *zdrs, PATHCONF3args *objp)
 uint32_t
 zdr_PATHCONF3resok (ZDR *zdrs, PATHCONF3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 			 return FALSE;
@@ -1383,9 +1145,6 @@ zdr_PATHCONF3resok (ZDR *zdrs, PATHCONF3resok *objp)
 uint32_t
 zdr_PATHCONF3resfail (ZDR *zdrs, PATHCONF3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1394,9 +1153,6 @@ zdr_PATHCONF3resfail (ZDR *zdrs, PATHCONF3resfail *objp)
 uint32_t
 zdr_PATHCONF3res (ZDR *zdrs, PATHCONF3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1415,9 +1171,6 @@ zdr_PATHCONF3res (ZDR *zdrs, PATHCONF3res *objp)
 uint32_t
 zdr_nfspath3 (ZDR *zdrs, nfspath3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, objp, ~0))
 		 return FALSE;
 	return TRUE;
@@ -1426,9 +1179,6 @@ zdr_nfspath3 (ZDR *zdrs, nfspath3 *objp)
 uint32_t
 zdr_symlinkdata3 (ZDR *zdrs, symlinkdata3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_sattr3 (zdrs, &objp->symlink_attributes))
 		 return FALSE;
 	 if (!zdr_nfspath3 (zdrs, &objp->symlink_data))
@@ -1439,9 +1189,6 @@ zdr_symlinkdata3 (ZDR *zdrs, symlinkdata3 *objp)
 uint32_t
 zdr_SYMLINK3args (ZDR *zdrs, SYMLINK3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_symlinkdata3 (zdrs, &objp->symlink))
@@ -1452,9 +1199,6 @@ zdr_SYMLINK3args (ZDR *zdrs, SYMLINK3args *objp)
 uint32_t
 zdr_SYMLINK3resok (ZDR *zdrs, SYMLINK3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_fh3 (zdrs, &objp->obj))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
@@ -1467,9 +1211,6 @@ zdr_SYMLINK3resok (ZDR *zdrs, SYMLINK3resok *objp)
 uint32_t
 zdr_SYMLINK3resfail (ZDR *zdrs, SYMLINK3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -1478,9 +1219,6 @@ zdr_SYMLINK3resfail (ZDR *zdrs, SYMLINK3resfail *objp)
 uint32_t
 zdr_SYMLINK3res (ZDR *zdrs, SYMLINK3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1499,9 +1237,6 @@ zdr_SYMLINK3res (ZDR *zdrs, SYMLINK3res *objp)
 uint32_t
 zdr_READLINK3args (ZDR *zdrs, READLINK3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->symlink))
 		 return FALSE;
 	return TRUE;
@@ -1510,9 +1245,6 @@ zdr_READLINK3args (ZDR *zdrs, READLINK3args *objp)
 uint32_t
 zdr_READLINK3resok (ZDR *zdrs, READLINK3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->symlink_attributes))
 		 return FALSE;
 	 if (!zdr_nfspath3 (zdrs, &objp->data))
@@ -1523,9 +1255,6 @@ zdr_READLINK3resok (ZDR *zdrs, READLINK3resok *objp)
 uint32_t
 zdr_READLINK3resfail (ZDR *zdrs, READLINK3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->symlink_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1534,9 +1263,6 @@ zdr_READLINK3resfail (ZDR *zdrs, READLINK3resfail *objp)
 uint32_t
 zdr_READLINK3res (ZDR *zdrs, READLINK3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1555,9 +1281,6 @@ zdr_READLINK3res (ZDR *zdrs, READLINK3res *objp)
 uint32_t
 zdr_devicedata3 (ZDR *zdrs, devicedata3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_sattr3 (zdrs, &objp->dev_attributes))
 		 return FALSE;
 	 if (!zdr_specdata3 (zdrs, &objp->spec))
@@ -1568,9 +1291,6 @@ zdr_devicedata3 (ZDR *zdrs, devicedata3 *objp)
 uint32_t
 zdr_mknoddata3 (ZDR *zdrs, mknoddata3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_ftype3 (zdrs, &objp->type))
 		 return FALSE;
 	switch (objp->type) {
@@ -1599,9 +1319,6 @@ zdr_mknoddata3 (ZDR *zdrs, mknoddata3 *objp)
 uint32_t
 zdr_MKNOD3args (ZDR *zdrs, MKNOD3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_mknoddata3 (zdrs, &objp->what))
@@ -1612,9 +1329,6 @@ zdr_MKNOD3args (ZDR *zdrs, MKNOD3args *objp)
 uint32_t
 zdr_MKNOD3resok (ZDR *zdrs, MKNOD3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_fh3 (zdrs, &objp->obj))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
@@ -1627,9 +1341,6 @@ zdr_MKNOD3resok (ZDR *zdrs, MKNOD3resok *objp)
 uint32_t
 zdr_MKNOD3resfail (ZDR *zdrs, MKNOD3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -1638,9 +1349,6 @@ zdr_MKNOD3resfail (ZDR *zdrs, MKNOD3resfail *objp)
 uint32_t
 zdr_MKNOD3res (ZDR *zdrs, MKNOD3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1659,9 +1367,6 @@ zdr_MKNOD3res (ZDR *zdrs, MKNOD3res *objp)
 uint32_t
 zdr_MKDIR3args (ZDR *zdrs, MKDIR3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_sattr3 (zdrs, &objp->attributes))
@@ -1672,9 +1377,6 @@ zdr_MKDIR3args (ZDR *zdrs, MKDIR3args *objp)
 uint32_t
 zdr_MKDIR3resok (ZDR *zdrs, MKDIR3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_fh3 (zdrs, &objp->obj))
 		 return FALSE;
 	 if (!zdr_post_op_attr (zdrs, &objp->obj_attributes))
@@ -1687,9 +1389,6 @@ zdr_MKDIR3resok (ZDR *zdrs, MKDIR3resok *objp)
 uint32_t
 zdr_MKDIR3resfail (ZDR *zdrs, MKDIR3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -1698,9 +1397,6 @@ zdr_MKDIR3resfail (ZDR *zdrs, MKDIR3resfail *objp)
 uint32_t
 zdr_MKDIR3res (ZDR *zdrs, MKDIR3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1719,9 +1415,6 @@ zdr_MKDIR3res (ZDR *zdrs, MKDIR3res *objp)
 uint32_t
 zdr_RMDIR3args (ZDR *zdrs, RMDIR3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->object))
 		 return FALSE;
 	return TRUE;
@@ -1730,9 +1423,6 @@ zdr_RMDIR3args (ZDR *zdrs, RMDIR3args *objp)
 uint32_t
 zdr_RMDIR3resok (ZDR *zdrs, RMDIR3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -1741,9 +1431,6 @@ zdr_RMDIR3resok (ZDR *zdrs, RMDIR3resok *objp)
 uint32_t
 zdr_RMDIR3resfail (ZDR *zdrs, RMDIR3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->dir_wcc))
 		 return FALSE;
 	return TRUE;
@@ -1752,9 +1439,6 @@ zdr_RMDIR3resfail (ZDR *zdrs, RMDIR3resfail *objp)
 uint32_t
 zdr_RMDIR3res (ZDR *zdrs, RMDIR3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1773,9 +1457,6 @@ zdr_RMDIR3res (ZDR *zdrs, RMDIR3res *objp)
 uint32_t
 zdr_RENAME3args (ZDR *zdrs, RENAME3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs3 (zdrs, &objp->from))
 		 return FALSE;
 	 if (!zdr_diropargs3 (zdrs, &objp->to))
@@ -1786,9 +1467,6 @@ zdr_RENAME3args (ZDR *zdrs, RENAME3args *objp)
 uint32_t
 zdr_RENAME3resok (ZDR *zdrs, RENAME3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->fromdir_wcc))
 		 return FALSE;
 	 if (!zdr_wcc_data (zdrs, &objp->todir_wcc))
@@ -1799,9 +1477,6 @@ zdr_RENAME3resok (ZDR *zdrs, RENAME3resok *objp)
 uint32_t
 zdr_RENAME3resfail (ZDR *zdrs, RENAME3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->fromdir_wcc))
 		 return FALSE;
 	 if (!zdr_wcc_data (zdrs, &objp->todir_wcc))
@@ -1812,9 +1487,6 @@ zdr_RENAME3resfail (ZDR *zdrs, RENAME3resfail *objp)
 uint32_t
 zdr_RENAME3res (ZDR *zdrs, RENAME3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1833,9 +1505,6 @@ zdr_RENAME3res (ZDR *zdrs, RENAME3res *objp)
 uint32_t
 zdr_READDIRPLUS3args (ZDR *zdrs, READDIRPLUS3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->dir))
 		 return FALSE;
 	 if (!zdr_cookie3 (zdrs, &objp->cookie))
@@ -1852,9 +1521,6 @@ zdr_READDIRPLUS3args (ZDR *zdrs, READDIRPLUS3args *objp)
 uint32_t
 zdr_entryplus3 (ZDR *zdrs, entryplus3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fileid3 (zdrs, &objp->fileid))
 		 return FALSE;
 	 if (!zdr_filename3 (zdrs, &objp->name))
@@ -1873,9 +1539,6 @@ zdr_entryplus3 (ZDR *zdrs, entryplus3 *objp)
 uint32_t
 zdr_dirlistplus3 (ZDR *zdrs, dirlistplus3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_pointer (zdrs, (char **)&objp->entries, sizeof (entryplus3), (zdrproc_t) zdr_entryplus3))
 		 return FALSE;
 	 if (!zdr_bool (zdrs, &objp->eof))
@@ -1886,9 +1549,6 @@ zdr_dirlistplus3 (ZDR *zdrs, dirlistplus3 *objp)
 uint32_t
 zdr_READDIRPLUS3resok (ZDR *zdrs, READDIRPLUS3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->dir_attributes))
 		 return FALSE;
 	 if (!zdr_cookieverf3 (zdrs, objp->cookieverf))
@@ -1901,9 +1561,6 @@ zdr_READDIRPLUS3resok (ZDR *zdrs, READDIRPLUS3resok *objp)
 uint32_t
 zdr_READDIRPLUS3resfail (ZDR *zdrs, READDIRPLUS3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->dir_attributes))
 		 return FALSE;
 	return TRUE;
@@ -1912,9 +1569,6 @@ zdr_READDIRPLUS3resfail (ZDR *zdrs, READDIRPLUS3resfail *objp)
 uint32_t
 zdr_READDIRPLUS3res (ZDR *zdrs, READDIRPLUS3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -1933,9 +1587,6 @@ zdr_READDIRPLUS3res (ZDR *zdrs, READDIRPLUS3res *objp)
 uint32_t
 zdr_READDIR3args (ZDR *zdrs, READDIR3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->dir))
 		 return FALSE;
 	 if (!zdr_cookie3 (zdrs, &objp->cookie))
@@ -1950,9 +1601,6 @@ zdr_READDIR3args (ZDR *zdrs, READDIR3args *objp)
 uint32_t
 zdr_entry3 (ZDR *zdrs, entry3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fileid3 (zdrs, &objp->fileid))
 		 return FALSE;
 	 if (!zdr_filename3 (zdrs, &objp->name))
@@ -1967,9 +1615,6 @@ zdr_entry3 (ZDR *zdrs, entry3 *objp)
 uint32_t
 zdr_dirlist3 (ZDR *zdrs, dirlist3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_pointer (zdrs, (char **)&objp->entries, sizeof (entry3), (zdrproc_t) zdr_entry3))
 		 return FALSE;
 	 if (!zdr_bool (zdrs, &objp->eof))
@@ -1980,9 +1625,6 @@ zdr_dirlist3 (ZDR *zdrs, dirlist3 *objp)
 uint32_t
 zdr_READDIR3resok (ZDR *zdrs, READDIR3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->dir_attributes))
 		 return FALSE;
 	 if (!zdr_cookieverf3 (zdrs, objp->cookieverf))
@@ -1995,9 +1637,6 @@ zdr_READDIR3resok (ZDR *zdrs, READDIR3resok *objp)
 uint32_t
 zdr_READDIR3resfail (ZDR *zdrs, READDIR3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->dir_attributes))
 		 return FALSE;
 	return TRUE;
@@ -2006,9 +1645,6 @@ zdr_READDIR3resfail (ZDR *zdrs, READDIR3resfail *objp)
 uint32_t
 zdr_READDIR3res (ZDR *zdrs, READDIR3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2027,9 +1663,6 @@ zdr_READDIR3res (ZDR *zdrs, READDIR3res *objp)
 uint32_t
 zdr_LINK3args (ZDR *zdrs, LINK3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->file))
 		 return FALSE;
 	 if (!zdr_diropargs3 (zdrs, &objp->link))
@@ -2039,9 +1672,6 @@ zdr_LINK3args (ZDR *zdrs, LINK3args *objp)
 
 uint32_t
 zdr_LINK3resok (ZDR *zdrs, LINK3resok *objp)
-{
-	register int32_t *buf;
- buf = NULL;
 
 	 if (!zdr_post_op_attr (zdrs, &objp->file_attributes))
 		 return FALSE;
@@ -2053,9 +1683,6 @@ zdr_LINK3resok (ZDR *zdrs, LINK3resok *objp)
 uint32_t
 zdr_LINK3resfail (ZDR *zdrs, LINK3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->file_attributes))
 		 return FALSE;
 	 if (!zdr_wcc_data (zdrs, &objp->linkdir_wcc))
@@ -2066,9 +1693,6 @@ zdr_LINK3resfail (ZDR *zdrs, LINK3resfail *objp)
 uint32_t
 zdr_LINK3res (ZDR *zdrs, LINK3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2087,9 +1711,6 @@ zdr_LINK3res (ZDR *zdrs, LINK3res *objp)
 uint32_t
 zdr_sattrguard3 (ZDR *zdrs, sattrguard3 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bool (zdrs, &objp->check))
 		 return FALSE;
 	switch (objp->check) {
@@ -2108,9 +1729,6 @@ zdr_sattrguard3 (ZDR *zdrs, sattrguard3 *objp)
 uint32_t
 zdr_SETATTR3args (ZDR *zdrs, SETATTR3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->object))
 		 return FALSE;
 	 if (!zdr_sattr3 (zdrs, &objp->new_attributes))
@@ -2123,9 +1741,6 @@ zdr_SETATTR3args (ZDR *zdrs, SETATTR3args *objp)
 uint32_t
 zdr_SETATTR3resok (ZDR *zdrs, SETATTR3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->obj_wcc))
 		 return FALSE;
 	return TRUE;
@@ -2134,9 +1749,6 @@ zdr_SETATTR3resok (ZDR *zdrs, SETATTR3resok *objp)
 uint32_t
 zdr_SETATTR3resfail (ZDR *zdrs, SETATTR3resfail *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_wcc_data (zdrs, &objp->obj_wcc))
 		 return FALSE;
 	return TRUE;
@@ -2145,9 +1757,6 @@ zdr_SETATTR3resfail (ZDR *zdrs, SETATTR3resfail *objp)
 uint32_t
 zdr_SETATTR3res (ZDR *zdrs, SETATTR3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2166,9 +1775,6 @@ zdr_SETATTR3res (ZDR *zdrs, SETATTR3res *objp)
 uint32_t
 zdr_fhandle2 (ZDR *zdrs, fhandle2 objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_opaque (zdrs, objp, FHSIZE2))
 		 return FALSE;
 	return TRUE;
@@ -2177,9 +1783,6 @@ zdr_fhandle2 (ZDR *zdrs, fhandle2 objp)
 uint32_t
 zdr_ftype2 (ZDR *zdrs, ftype2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -2188,10 +1791,6 @@ zdr_ftype2 (ZDR *zdrs, ftype2 *objp)
 uint32_t
 zdr_fattr2 (ZDR *zdrs, fattr2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		 if (!zdr_ftype2 (zdrs, &objp->type))
 			 return FALSE;
@@ -2318,10 +1917,6 @@ zdr_fattr2 (ZDR *zdrs, fattr2 *objp)
 uint32_t
 zdr_sattr2 (ZDR *zdrs, sattr2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		buf = ZDR_INLINE (zdrs, 4 * BYTES_PER_ZDR_UNIT);
 		if (buf == NULL) {
@@ -2388,9 +1983,6 @@ zdr_sattr2 (ZDR *zdrs, sattr2 *objp)
 uint32_t
 zdr_filename2 (ZDR *zdrs, filename2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, objp, MAXNAMLEN2))
 		 return FALSE;
 	return TRUE;
@@ -2399,9 +1991,6 @@ zdr_filename2 (ZDR *zdrs, filename2 *objp)
 uint32_t
 zdr_path2 (ZDR *zdrs, path2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_string (zdrs, objp, MAXPATHLEN2))
 		 return FALSE;
 	return TRUE;
@@ -2410,9 +1999,6 @@ zdr_path2 (ZDR *zdrs, path2 *objp)
 uint32_t
 zdr_nfsdata2 (ZDR *zdrs, nfsdata2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_bytes (zdrs, (char **)&objp->nfsdata2_val, (u_int *) &objp->nfsdata2_len, NFSMAXDATA2))
 		 return FALSE;
 	return TRUE;
@@ -2421,9 +2007,6 @@ zdr_nfsdata2 (ZDR *zdrs, nfsdata2 *objp)
 uint32_t
 zdr_nfscookie2 (ZDR *zdrs, nfscookie2 objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_opaque (zdrs, objp, NFSCOOKIESIZE2))
 		 return FALSE;
 	return TRUE;
@@ -2432,9 +2015,6 @@ zdr_nfscookie2 (ZDR *zdrs, nfscookie2 objp)
 uint32_t
 zdr_entry2 (ZDR *zdrs, entry2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_u_int (zdrs, &objp->fileid))
 		 return FALSE;
 	 if (!zdr_filename2 (zdrs, &objp->name))
@@ -2449,9 +2029,6 @@ zdr_entry2 (ZDR *zdrs, entry2 *objp)
 uint32_t
 zdr_diropargs2 (ZDR *zdrs, diropargs2 *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->dir))
 		 return FALSE;
 	 if (!zdr_filename2 (zdrs, &objp->name))
@@ -2462,9 +2039,6 @@ zdr_diropargs2 (ZDR *zdrs, diropargs2 *objp)
 uint32_t
 zdr_GETATTR2args (ZDR *zdrs, GETATTR2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->fhandle))
 		 return FALSE;
 	return TRUE;
@@ -2473,9 +2047,6 @@ zdr_GETATTR2args (ZDR *zdrs, GETATTR2args *objp)
 uint32_t
 zdr_GETATTR2resok (ZDR *zdrs, GETATTR2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
 		 return FALSE;
 	return TRUE;
@@ -2484,9 +2055,6 @@ zdr_GETATTR2resok (ZDR *zdrs, GETATTR2resok *objp)
 uint32_t
 zdr_GETATTR2res (ZDR *zdrs, GETATTR2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2503,9 +2071,6 @@ zdr_GETATTR2res (ZDR *zdrs, GETATTR2res *objp)
 uint32_t
 zdr_SETATTR2args (ZDR *zdrs, SETATTR2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->fhandle))
 		 return FALSE;
 	 if (!zdr_sattr2 (zdrs, &objp->attributes))
@@ -2516,9 +2081,6 @@ zdr_SETATTR2args (ZDR *zdrs, SETATTR2args *objp)
 uint32_t
 zdr_SETATTR2resok (ZDR *zdrs, SETATTR2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
 		 return FALSE;
 	return TRUE;
@@ -2527,9 +2089,6 @@ zdr_SETATTR2resok (ZDR *zdrs, SETATTR2resok *objp)
 uint32_t
 zdr_SETATTR2res (ZDR *zdrs, SETATTR2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2546,9 +2105,6 @@ zdr_SETATTR2res (ZDR *zdrs, SETATTR2res *objp)
 uint32_t
 zdr_LOOKUP2args (ZDR *zdrs, LOOKUP2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->what))
 		 return FALSE;
 	return TRUE;
@@ -2557,9 +2113,6 @@ zdr_LOOKUP2args (ZDR *zdrs, LOOKUP2args *objp)
 uint32_t
 zdr_LOOKUP2resok (ZDR *zdrs, LOOKUP2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->file))
 		 return FALSE;
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
@@ -2570,9 +2123,6 @@ zdr_LOOKUP2resok (ZDR *zdrs, LOOKUP2resok *objp)
 uint32_t
 zdr_LOOKUP2res (ZDR *zdrs, LOOKUP2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2589,9 +2139,6 @@ zdr_LOOKUP2res (ZDR *zdrs, LOOKUP2res *objp)
 uint32_t
 zdr_READLINK2args (ZDR *zdrs, READLINK2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->file))
 		 return FALSE;
 	return TRUE;
@@ -2600,9 +2147,6 @@ zdr_READLINK2args (ZDR *zdrs, READLINK2args *objp)
 uint32_t
 zdr_READLINK2resok (ZDR *zdrs, READLINK2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_path2 (zdrs, &objp->data))
 		 return FALSE;
 	return TRUE;
@@ -2611,9 +2155,6 @@ zdr_READLINK2resok (ZDR *zdrs, READLINK2resok *objp)
 uint32_t
 zdr_READLINK2res (ZDR *zdrs, READLINK2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2630,9 +2171,6 @@ zdr_READLINK2res (ZDR *zdrs, READLINK2res *objp)
 uint32_t
 zdr_READ2args (ZDR *zdrs, READ2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->file))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->offset))
@@ -2647,9 +2185,6 @@ zdr_READ2args (ZDR *zdrs, READ2args *objp)
 uint32_t
 zdr_READ2resok (ZDR *zdrs, READ2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
 		 return FALSE;
 	 if (!zdr_nfsdata2 (zdrs, &objp->data))
@@ -2660,9 +2195,6 @@ zdr_READ2resok (ZDR *zdrs, READ2resok *objp)
 uint32_t
 zdr_READ2res (ZDR *zdrs, READ2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2679,10 +2211,6 @@ zdr_READ2res (ZDR *zdrs, READ2res *objp)
 uint32_t
 zdr_WRITE2args (ZDR *zdrs, WRITE2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		 if (!zdr_fhandle2 (zdrs, objp->file))
 			 return FALSE;
@@ -2741,9 +2269,6 @@ zdr_WRITE2args (ZDR *zdrs, WRITE2args *objp)
 uint32_t
 zdr_WRITE2resok (ZDR *zdrs, WRITE2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
 		 return FALSE;
 	return TRUE;
@@ -2752,9 +2277,6 @@ zdr_WRITE2resok (ZDR *zdrs, WRITE2resok *objp)
 uint32_t
 zdr_WRITE2res (ZDR *zdrs, WRITE2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2771,9 +2293,6 @@ zdr_WRITE2res (ZDR *zdrs, WRITE2res *objp)
 uint32_t
 zdr_CREATE2args (ZDR *zdrs, CREATE2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_sattr2 (zdrs, &objp->attributes))
@@ -2784,9 +2303,6 @@ zdr_CREATE2args (ZDR *zdrs, CREATE2args *objp)
 uint32_t
 zdr_CREATE2resok (ZDR *zdrs, CREATE2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->file))
 		 return FALSE;
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
@@ -2797,9 +2313,6 @@ zdr_CREATE2resok (ZDR *zdrs, CREATE2resok *objp)
 uint32_t
 zdr_CREATE2res (ZDR *zdrs, CREATE2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2816,9 +2329,6 @@ zdr_CREATE2res (ZDR *zdrs, CREATE2res *objp)
 uint32_t
 zdr_REMOVE2args (ZDR *zdrs, REMOVE2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->what))
 		 return FALSE;
 	return TRUE;
@@ -2827,9 +2337,6 @@ zdr_REMOVE2args (ZDR *zdrs, REMOVE2args *objp)
 uint32_t
 zdr_REMOVE2res (ZDR *zdrs, REMOVE2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	return TRUE;
@@ -2838,9 +2345,6 @@ zdr_REMOVE2res (ZDR *zdrs, REMOVE2res *objp)
 uint32_t
 zdr_RENAME2args (ZDR *zdrs, RENAME2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->from))
 		 return FALSE;
 	 if (!zdr_diropargs2 (zdrs, &objp->to))
@@ -2851,9 +2355,6 @@ zdr_RENAME2args (ZDR *zdrs, RENAME2args *objp)
 uint32_t
 zdr_RENAME2res (ZDR *zdrs, RENAME2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	return TRUE;
@@ -2862,9 +2363,6 @@ zdr_RENAME2res (ZDR *zdrs, RENAME2res *objp)
 uint32_t
 zdr_LINK2args (ZDR *zdrs, LINK2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->from))
 		 return FALSE;
 	 if (!zdr_diropargs2 (zdrs, &objp->to))
@@ -2875,9 +2373,6 @@ zdr_LINK2args (ZDR *zdrs, LINK2args *objp)
 uint32_t
 zdr_LINK2res (ZDR *zdrs, LINK2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	return TRUE;
@@ -2886,9 +2381,6 @@ zdr_LINK2res (ZDR *zdrs, LINK2res *objp)
 uint32_t
 zdr_SYMLINK2args (ZDR *zdrs, SYMLINK2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->from))
 		 return FALSE;
 	 if (!zdr_path2 (zdrs, &objp->to))
@@ -2901,9 +2393,6 @@ zdr_SYMLINK2args (ZDR *zdrs, SYMLINK2args *objp)
 uint32_t
 zdr_SYMLINK2res (ZDR *zdrs, SYMLINK2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	return TRUE;
@@ -2912,9 +2401,6 @@ zdr_SYMLINK2res (ZDR *zdrs, SYMLINK2res *objp)
 uint32_t
 zdr_MKDIR2args (ZDR *zdrs, MKDIR2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->where))
 		 return FALSE;
 	 if (!zdr_sattr2 (zdrs, &objp->attributes))
@@ -2925,9 +2411,6 @@ zdr_MKDIR2args (ZDR *zdrs, MKDIR2args *objp)
 uint32_t
 zdr_MKDIR2resok (ZDR *zdrs, MKDIR2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->file))
 		 return FALSE;
 	 if (!zdr_fattr2 (zdrs, &objp->attributes))
@@ -2938,9 +2421,6 @@ zdr_MKDIR2resok (ZDR *zdrs, MKDIR2resok *objp)
 uint32_t
 zdr_MKDIR2res (ZDR *zdrs, MKDIR2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -2957,9 +2437,6 @@ zdr_MKDIR2res (ZDR *zdrs, MKDIR2res *objp)
 uint32_t
 zdr_RMDIR2args (ZDR *zdrs, RMDIR2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_diropargs2 (zdrs, &objp->what))
 		 return FALSE;
 	return TRUE;
@@ -2968,9 +2445,6 @@ zdr_RMDIR2args (ZDR *zdrs, RMDIR2args *objp)
 uint32_t
 zdr_RMDIR2res (ZDR *zdrs, RMDIR2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	return TRUE;
@@ -2979,9 +2453,6 @@ zdr_RMDIR2res (ZDR *zdrs, RMDIR2res *objp)
 uint32_t
 zdr_READDIR2args (ZDR *zdrs, READDIR2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->dir))
 		 return FALSE;
 	 if (!zdr_nfscookie2 (zdrs, objp->cookie))
@@ -2994,9 +2465,6 @@ zdr_READDIR2args (ZDR *zdrs, READDIR2args *objp)
 uint32_t
 zdr_READDIR2resok (ZDR *zdrs, READDIR2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_pointer (zdrs, (char **)&objp->entries, sizeof (entry2), (zdrproc_t) zdr_entry2))
 		 return FALSE;
 	 if (!zdr_bool (zdrs, &objp->eof))
@@ -3007,9 +2475,6 @@ zdr_READDIR2resok (ZDR *zdrs, READDIR2resok *objp)
 uint32_t
 zdr_READDIR2res (ZDR *zdrs, READDIR2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -3026,9 +2491,6 @@ zdr_READDIR2res (ZDR *zdrs, READDIR2res *objp)
 uint32_t
 zdr_STATFS2args (ZDR *zdrs, STATFS2args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_fhandle2 (zdrs, objp->dir))
 		 return FALSE;
 	return TRUE;
@@ -3037,10 +2499,6 @@ zdr_STATFS2args (ZDR *zdrs, STATFS2args *objp)
 uint32_t
 zdr_STATFS2resok (ZDR *zdrs, STATFS2resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
-
 	if (zdrs->x_op == ZDR_ENCODE) {
 		buf = ZDR_INLINE (zdrs, 5 * BYTES_PER_ZDR_UNIT);
 		if (buf == NULL) {
@@ -3101,9 +2559,6 @@ zdr_STATFS2resok (ZDR *zdrs, STATFS2resok *objp)
 uint32_t
 zdr_STATFS2res (ZDR *zdrs, STATFS2res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -3120,9 +2575,6 @@ zdr_STATFS2res (ZDR *zdrs, STATFS2res *objp)
 uint32_t
 zdr_nfsacl_type (ZDR *zdrs, nfsacl_type *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_enum (zdrs, (enum_t *) objp))
 		 return FALSE;
 	return TRUE;
@@ -3131,9 +2583,6 @@ zdr_nfsacl_type (ZDR *zdrs, nfsacl_type *objp)
 uint32_t
 zdr_nfsacl_ace (ZDR *zdrs, nfsacl_ace *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsacl_type (zdrs, &objp->type))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->id))
@@ -3146,9 +2595,6 @@ zdr_nfsacl_ace (ZDR *zdrs, nfsacl_ace *objp)
 uint32_t
 zdr_GETACL3args (ZDR *zdrs, GETACL3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->dir))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->mask))
@@ -3159,9 +2605,6 @@ zdr_GETACL3args (ZDR *zdrs, GETACL3args *objp)
 uint32_t
 zdr_GETACL3resok (ZDR *zdrs, GETACL3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->attr))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->mask))
@@ -3182,9 +2625,6 @@ zdr_GETACL3resok (ZDR *zdrs, GETACL3resok *objp)
 uint32_t
 zdr_GETACL3res (ZDR *zdrs, GETACL3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {
@@ -3201,9 +2641,6 @@ zdr_GETACL3res (ZDR *zdrs, GETACL3res *objp)
 uint32_t
 zdr_SETACL3args (ZDR *zdrs, SETACL3args *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfs_fh3 (zdrs, &objp->dir))
 		 return FALSE;
 	 if (!zdr_u_int (zdrs, &objp->mask))
@@ -3224,9 +2661,6 @@ zdr_SETACL3args (ZDR *zdrs, SETACL3args *objp)
 uint32_t
 zdr_SETACL3resok (ZDR *zdrs, SETACL3resok *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_post_op_attr (zdrs, &objp->attr))
 		 return FALSE;
 	return TRUE;
@@ -3235,9 +2669,6 @@ zdr_SETACL3resok (ZDR *zdrs, SETACL3resok *objp)
 uint32_t
 zdr_SETACL3res (ZDR *zdrs, SETACL3res *objp)
 {
-	register int32_t *buf;
- buf = NULL;
-
 	 if (!zdr_nfsstat3 (zdrs, &objp->status))
 		 return FALSE;
 	switch (objp->status) {

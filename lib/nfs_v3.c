@@ -3772,69 +3772,6 @@ nfs3_fsync_async(struct nfs_context *nfs, struct nfsfh *nfsfh, nfs_cb cb,
 }
 
 static void
-nfs3_azauth_cb(struct rpc_context *rpc, int status, void *command_data,
-              void *private_data)
-{
-	struct nfs_cb_data *data = private_data;
-	struct nfs_context *nfs = data->nfs;
-	AZAUTH3res *res;
-
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
-
-	if (check_nfs3_error(nfs, status, data, command_data)) {
-		free_nfs_cb_data(data);
-		return;
-	}
-
-	res = command_data;
-	if (res->status != NFS3_OK) {
-		nfs_set_error(nfs, "NFS: Commit failed with %s(%d)",
-                              nfsstat3_to_str(res->status),
-                              nfsstat3_to_errno(res->status));
-		data->cb(nfsstat3_to_errno(res->status), nfs,
-                         nfs_get_error(nfs), data->private_data);
-		free_nfs_cb_data(data);
-		return;
-	}
-
-	data->cb(0, nfs, NULL, data->private_data);
-	free_nfs_cb_data(data);
-}
-
-int
-nfs3_azauth_async(struct nfs_context *nfs, char *client_version, char *clientid, 
-				 char *authtype, char *auth_data, nfs_cb cb,
-                 void *private_data)
-{
-	struct nfs_cb_data *data;
-	struct AZAUTH3args args;
-
-	data = calloc(1, sizeof(struct nfs_cb_data));
-	if (data == NULL) {
-		nfs_set_error(nfs, "out of memory: failed to allocate "
-                              "nfs_cb_data structure");
-		return -1;
-	}
-	data->nfs          = nfs;
-	data->cb           = cb;
-	data->private_data = private_data;
-
-	args.client_version = client_version;
-	args.clientid = clientid;
-	args.authtype = authtype;
-	args.authdata = auth_data;
-	if (rpc_nfs3_azauth_task(nfs->rpc, nfs3_azauth_cb, &args, data) == NULL) {
-		nfs_set_error(nfs, "RPC error: Failed to send AZAUTH "
-                              "call for %s", data->path);
-		data->cb(-ENOMEM, nfs, nfs_get_error(nfs),
-                         data->private_data);
-		free_nfs_cb_data(data);
-		return -1;
-	}
-	return 0;
-}
-
-static void
 nfs3_getacl_cb(struct rpc_context *rpc, int status, void *command_data,
                void *private_data)
 {

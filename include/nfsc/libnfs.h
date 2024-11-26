@@ -961,11 +961,6 @@ EXTERN int nfs_fcntl(struct nfs_context *nfs, struct nfsfh *nfsfh,
 EXTERN int nfs_fsync_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                            nfs_cb cb, void *private_data);
 
-
-EXTERN int nfs_azauth_async(struct nfs_context *nfs, char *client_version, char *clientid, 
-			    char *authtype, char *auth_data, nfs_cb cb,
-                            void *private_data);
-
 /*
  * Sync fsync()
  * Function returns
