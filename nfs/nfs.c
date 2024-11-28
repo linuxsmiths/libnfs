@@ -553,7 +553,7 @@ struct rpc_pdu *rpc_nfs3_azauth_task(struct rpc_context *rpc, rpc_cb cb,
 		return NULL;
 	}
 
-	if (rpc_queue_pdu(rpc, pdu) != 0) {
+	if (rpc_queue_pdu2(rpc, pdu, 1 /* high_prio */) != 0) {
 		rpc_set_error(rpc, "Out of memory. Failed to queue pdu for NFS3/AZAUTH call");
 		return NULL;
 	}
