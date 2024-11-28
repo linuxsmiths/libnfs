@@ -1,3 +1,4 @@
+
 /*
 Copyright (c) 2014, Ronnie Sahlberg
 All rights reserved.
@@ -285,7 +286,7 @@ typedef struct COMMIT3res COMMIT3res;
 struct AZAUTH3args {
 	char *client_version;
 	struct {
-		uint32_t clientid_len;
+		u_int clientid_len;
 		char *clientid_val;
 	} clientid;
 	char *authtype;
@@ -296,7 +297,10 @@ typedef struct AZAUTH3args AZAUTH3args;
 
 struct AZAUTH3resok {
 	char *server_version;
-	char *serverid;
+	struct {
+		u_int serverid_len;
+		char *serverid_val;
+	} serverid;
 };
 typedef struct AZAUTH3resok AZAUTH3resok;
 
@@ -1553,7 +1557,7 @@ extern  PATHCONF3res * nfs3_pathconf_3_svc(PATHCONF3args *, struct svc_req *);
 #define NFS3_COMMIT 21
 extern  COMMIT3res * nfs3_commit_3(COMMIT3args *, void *);
 extern  COMMIT3res * nfs3_commit_3_svc(COMMIT3args *, struct svc_req *);
-#define NFS3_AZAUTH 100
+#define NFS3_AZAUTH 23
 extern  AZAUTH3res * nfs3_azauth_3(AZAUTH3args *, void *);
 extern  AZAUTH3res * nfs3_azauth_3_svc(AZAUTH3args *, struct svc_req *);
 extern int nfs_program_3_freeresult (void *, zdrproc_t, caddr_t);
@@ -1625,7 +1629,7 @@ extern  PATHCONF3res * nfs3_pathconf_3_svc();
 #define NFS3_COMMIT 21
 extern  COMMIT3res * nfs3_commit_3();
 extern  COMMIT3res * nfs3_commit_3_svc();
-#define NFS3_AZAUTH 100
+#define NFS3_AZAUTH 23
 extern  AZAUTH3res * nfs3_azauth_3();
 extern  AZAUTH3res * nfs3_azauth_3_svc();
 extern int nfs_program_3_freeresult ();
