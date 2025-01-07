@@ -308,7 +308,6 @@ struct auth_context {
         uint64_t expiry_time;
 };
 
-
 struct gss_ctx_id_struct;
 struct rpc_context {
 	uint32_t magic;

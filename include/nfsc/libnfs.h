@@ -52,7 +52,6 @@ struct auth_context;
 struct AZAUTH3args;
 struct auth_token_cb_res;
 
-
 struct nfs_url {
 	char *server;
 	char *path;
@@ -176,7 +175,6 @@ EXTERN void nfs_set_azauth_azauthargs(struct auth_token_cb_res *auth, struct AZA
  * Used in the auth_token_callback_t implementations.
  */
 EXTERN void nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time);
-
 
 /*
  * Used if you need different credentials than the default for the current user.

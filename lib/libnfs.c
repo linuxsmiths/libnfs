@@ -1084,8 +1084,8 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 
 	if (status != RPC_STATUS_SUCCESS) {
 		data->cb(rpc, status, command_data, data->private_data);
-			free_rpc_cb_data(data);
-			return;
+		free_rpc_cb_data(data);
+		return;
 		}
 
 #ifdef HAVE_TLS
