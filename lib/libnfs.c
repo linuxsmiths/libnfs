@@ -943,6 +943,15 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
 	rpc->auth_context.is_authorized = 1;
 }
 
+static void
+rpc_connect_program_4_3_cb(struct rpc_context *rpc, int status,
+			   void *command_data, void *private_data)
+{
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	RPC_LOG(rpc, 2, "AzAuth completed successfully!");
+}
+
 /*
  * Callback function called when we get a response for an AUTH_TLS NULL RPC
  * that we sent to the server.
@@ -984,8 +993,9 @@ rpc_connect_program_4_1_cb(struct rpc_context *rpc, int status,
 		case TLS_HANDSHAKE_COMPLETED:
 			RPC_LOG(rpc, 2, "do_tls_handshake: TLS handshake completed "
 					"synchronously on fd %d", rpc->fd);
-			if (rpc_perform_auth_verify(rpc, data->version,
-					  rpc_connect_program_5_cb, data) == NULL) {
+
+			if (rpc_perform_auth_verify(rpc, rpc->nfs_version,
+					  rpc_connect_program_4_3_cb, data->private_data) == NULL) {
 				data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
 				break;
 			}
@@ -2742,28 +2752,30 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 #endif /* HAVE_TLS */
 
 #ifdef HAVE_TLS
-void
-rpc_perform_auth_verify(struct rpc_context *rpc, rpc_cb cb,
+struct rpc_pdu *
+rpc_perform_auth_verify(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 		      void *private_data)
 {
-	auth_token_cb_res *res = trigger_auth_event(rpc->auth_context);
+	struct rpc_pdu *pdu;
+
+	assert(nfs_version == NFS_V3 || nfs_version == NFS_V4);
+
+	auth_token_cb_res *res = trigger_auth_cb_event(rpc->auth_context);
 
 	AZAUTH3args *args_res = res->args;
 	
-	printf("Printing some vals %s %ld \n", args_res->authtarget, res->expiry_time);
-
 	rpc->auth_context.expiry_time = res->expiry_time;
 
-	if (rpc_nfs3_azauth_task(rpc, 
+	pdu = rpc_nfs3_azauth_task(rpc, 
                              rpc_connect_program_4_2_cb,
                              args_res,
-                             private_data) == NULL)
-	{
-		printf("RPC execution failed \n");
+                             private_data);
+	if (pdu == NULL) {
+		rpc_set_error(rpc, "AZAUTH RPC failed to set pdu");
 		free_rpc_cb_data(private_data);
-		return;
+		return NULL;
 	}
 
-	printf("rpc_nfs3_azauth_task call succeeded \n");
+	return pdu;
 }
 #endif /* HAVE_TLS */

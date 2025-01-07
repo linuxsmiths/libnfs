@@ -2717,6 +2717,30 @@ rpc_null_task(struct rpc_context *rpc, int program, int version,
 EXTERN struct rpc_pdu *
 rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 		      void *private_data);
+
+
+/*
+ * Call <generic>/NULL RPC with AZ_AUTH in order to probe auth
+ * support from the server, and if server supports auth, it sets the RBAC
+ * permissions and verifies the token.
+ * Callback will be called after auth completes (success or
+ * failure) and not just after we get a response for this RPC.
+ * Function returns
+ * pdu  : The command was queued successfully. The callback will be invoked once
+ *        the command completes.
+ * NULL : An error occured when trying to queue the command.
+ *        The callback will not be invoked.
+ *
+ * When the callback is invoked, status indicates the result:
+ * RPC_STATUS_SUCCESS : We got a successful response from the server.
+ *                      data is NULL.
+ * RPC_STATUS_ERROR   : The command failed with an error.
+ * RPC_STATUS_CANCEL  : The command was cancelled.
+ *                      data is NULL.
+ */
+EXTERN struct rpc_pdu *
+rpc_perform_auth_verify(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
+		      void *private_data);
 #endif
 
 #ifdef __cplusplus
