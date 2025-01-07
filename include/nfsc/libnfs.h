@@ -48,6 +48,11 @@ extern "C" {
 struct nfs_context;
 struct rpc_context;
 
+struct auth_context;
+struct AZAUTH3args;
+struct auth_token_cb_res;
+
+
 struct nfs_url {
 	char *server;
 	char *path;
@@ -137,6 +142,43 @@ EXTERN int nfs_service(struct nfs_context *nfs, int revents);
 EXTERN int nfs_queue_length(struct nfs_context *nfs);
 
 /*
+ * Returns the tenant id stored in the auth_context structure. 
+ * Used in the auth_token_callback_t implementations. 
+ */
+EXTERN char *nfs_get_tenantid(struct auth_context *auth);
+
+/*
+ * Returns the subscription id stored in the auth_context structure. 
+ * Used in the auth_token_callback_t implementations. 
+ */
+EXTERN char *nfs_get_subscriptionid(struct auth_context *auth);
+
+/*
+ * Returns the export path stored in the auth_context structure. 
+ * Used in the auth_token_callback_t implementations. 
+ */
+EXTERN char *nfs_get_exportpath(struct auth_context *auth);
+
+/*
+ * Returns the authtype stored in the auth_context structure. 
+ * Used in the auth_token_callback_t implementations. 
+ */
+EXTERN char *nfs_get_authtype(struct auth_context *auth);
+
+/*
+ * Sets the AZAUTH3args args in auth_token_cb_res.
+ * Used in the auth_token_callback_t implementations.
+ */
+EXTERN void nfs_set_azauth_azauthargs(struct auth_token_cb_res *auth, struct AZAUTH3args *args);
+
+/*
+ * Sets the expiry_time in auth_token_cb_res.
+ * Used in the auth_token_callback_t implementations.
+ */
+EXTERN void nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time);
+
+
+/*
  * Used if you need different credentials than the default for the current user.
  */
 struct AUTH;
@@ -208,6 +250,17 @@ EXTERN struct nfs_context *nfs_init_context(void);
  * Destroy an nfs context.
  */
 EXTERN void nfs_destroy_context(struct nfs_context *nfs);
+
+/*
+ * Define the auth token callback type. 
+ * It takes the auth_context, fetches the token for this context i.e for the tenant,
+ * performs sanity checks and prepares the AZAUTH3args to be passed to rpc_nfs3_azauth_task.
+ * It returns auth_token_cb_res containing AZAUTH3args and expiry time of the token fetched.
+ */ 
+typedef struct auth_token_cb_res *(*auth_token_callback_t)(struct auth_context *auth);
+
+// Function to set the auth_token_callback_t.
+EXTERN void set_auth_token_callback(auth_token_callback_t cb);
 
 /*
  * Commands that are in flight are kept on linked lists and keyed by
@@ -284,6 +337,21 @@ EXTERN int nfs_set_hash_size(struct nfs_context *nfs, int hashes);
  */
 EXTERN struct nfs_url *nfs_parse_url_full(struct nfs_context *nfs,
                                           const char *url);
+/*
+ * Used to set whether auth is required for this connection in the nfs_context. 
+*/
+EXTERN int nfs_use_azauth(struct nfs_context *nfs,
+                          int use_azauth);
+
+/*
+ * Used to set values in auth_context present in nfs->rpc. 
+ * It is only set if nfs_use_azauth() = 0. 
+*/
+EXTERN int nfs_set_auth_values(struct nfs_context *nfs,
+                               const char *export_path,
+                               const char *tenantid,
+                               const char *subscriptionid,
+                               const char *authtype);
 
 /*
  * Parse an NFS URL, but do not split path and file. File

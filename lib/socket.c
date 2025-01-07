@@ -1223,6 +1223,29 @@ rpc_timeout_scan(struct rpc_context *rpc)
 	return (need_reconnect ? -1 : 0);
 }
 
+
+/*
+ * Returns -1 when the auth is enabled for the connection and token is expired.
+ * We need to reconnect the connection in this case, to refresh the token. 
+ */
+static int
+rpc_auth_expired(struct rpc_context *rpc)
+{
+	uint64_t t = (long)time(NULL);
+	if (rpc->auth_context.is_authorized == 1 && rpc->auth_context.expiry_time <= t)
+	{
+		RPC_LOG(rpc, 2, "Auth is enabled and token is expired, reconnecting the connection"
+				" to acquire a new token Current time: %ld, expirytime: %ld. Authstate: %d", 
+				t,
+				rpc->auth_context.expiry_time, 
+				rpc->auth_context.is_authorized);
+		rpc->auth_context.is_authorized = 0;
+		return -1;
+	}
+
+	return 0;
+}
+
 int
 rpc_service(struct rpc_context *rpc, int revents)
 {
@@ -1234,7 +1257,7 @@ rpc_service(struct rpc_context *rpc, int revents)
 	 * connection. Schedule reconnect and requeue and return. Once the new
 	 * connection is ready, events will be processed for that.
 	 */
-	if (rpc_timeout_scan(rpc) != 0) {
+	if ((rpc_timeout_scan(rpc) != 0 ) || (rpc_auth_expired(rpc) != 0)) {
 		return rpc_reconnect_requeue(rpc);
 	}
 

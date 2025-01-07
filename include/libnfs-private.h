@@ -272,6 +272,43 @@ struct tls_context {
 
 #define INC_STATS(rpc, stat) ++((rpc)->stats.stat)
 
+/*
+ * Auth token callback received by auth_token_callback_t.
+ * It is updated in the callback function and communicated here to call the AzAuth RPC with args and set expiry time in auth_context.
+ */
+struct auth_token_cb_res {
+        /* AZAUTH3args populated in callback function. */
+        AZAUTH3args *args;
+
+        /* Expiry time of the token. It is in unix seconds since epoch format. */
+        uint64_t expiry_time;
+};
+typedef struct auth_token_cb_res auth_token_cb_res;
+
+struct auth_context {
+        /* Integer to tell if the connection is authorized
+         * It takes value=1 when connection is able to successfully perform auth. 
+         * For non-auth connections, it remains 0. 
+         */
+        int is_authorized;
+
+        /* Export path: It is of the format /account/container. */
+        char *export_path;
+
+        /* Tenant id for which the token is required. */
+        char *tenant_id;
+
+        /* Subscription id containing account/container. Used for token validation on server. */
+        char *subscription_id;
+
+        /* AuthType: Current only support AzAuthAAD. */
+        char *auth_type;
+
+        /* Expiry time of the token. It is updated after successful auth_token_callback_t reception. */
+        uint64_t expiry_time;
+};
+
+
 struct gss_ctx_id_struct;
 struct rpc_context {
 	uint32_t magic;
@@ -435,6 +472,12 @@ struct rpc_context {
 
 	/* Context used for performing TLS handshake with the server */
 	struct tls_context tls_context;
+
+        /* Does the connection required to perform auth? */
+        int use_azauth;
+
+        /* Context used for performing auth check for the account/container mounted for.*/
+        struct auth_context auth_context;
 #endif /* HAVE_TLS */
 
 #ifdef HAVE_LIBKRB5
