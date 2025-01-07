@@ -553,7 +553,13 @@ struct rpc_pdu *rpc_nfs3_azauth_task(struct rpc_context *rpc, rpc_cb cb,
 		return NULL;
 	}
 
-	if (rpc_queue_pdu2(rpc, pdu, 1 /* high_prio */) != 0) {
+	/*
+	 * AzAuth RPC is given a special priority and added always to the head of the queue.
+	 * It should be the first request to be processed.
+	 */
+
+	pdu->is_head_prio = 1;
+	if (rpc_queue_pdu2(rpc, pdu, 2 /* high_prio */) != 0) {
 		rpc_set_error(rpc, "Out of memory. Failed to queue pdu for NFS3/AZAUTH call");
 		return NULL;
 	}

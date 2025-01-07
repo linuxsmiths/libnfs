@@ -533,6 +533,11 @@ struct rpc_pdu {
          */
         bool_t is_high_prio;
 
+        /*
+         * Is it a head-prio pdu, currently used only by AzAuth RPC.
+         */
+        bool_t is_head_prio;
+
 	struct rpc_data outdata;
 
         /* For sending/receiving
@@ -686,7 +691,7 @@ void pdu_set_timeout(struct rpc_context *rpc, struct rpc_pdu *pdu, uint64_t now_
 
 void rpc_free_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
 int rpc_queue_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu);
-int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, bool_t high_prio);
+int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio);
 int rpc_process_pdu(struct rpc_context *rpc, char *buf, int size);
 struct rpc_pdu *rpc_find_pdu(struct rpc_context *rpc, uint32_t xid);
 void rpc_error_all_pdus(struct rpc_context *rpc, const char *error);

@@ -710,7 +710,7 @@ void pdu_set_timeout(struct rpc_context *rpc, struct rpc_pdu *pdu, uint64_t now_
  * take very large time causing commands like stat/ls/find etc to appear to
  * hang.
  */
-int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, bool_t high_prio)
+int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
 {
 	int i, size = 0, pos;
         uint32_t recordmarker;
@@ -935,10 +935,12 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, bool_t high_pri
         /* Fresh PDU being queued to outqueue, num_done must be 0 */
         assert(pdu->out.num_done == 0);
 
-        if (!high_prio) {
+        if (prio == 0) {
                 rpc_add_to_outqueue_lowp(rpc, pdu);
-        } else {
+        } else if (prio == 1) {
                 rpc_add_to_outqueue_highp(rpc, pdu);
+        } else {
+                rpc_add_to_outqueue_head(rpc, pdu);
         }
 
         send_now = (rpc->outqueue.head == pdu);
@@ -969,7 +971,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, bool_t high_pri
 
 int rpc_queue_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu)
 {
-        return rpc_queue_pdu2(rpc, pdu, 0 /* high_prio */);
+        return rpc_queue_pdu2(rpc, pdu, 0 /* prio */);
 }
 
 static int rpc_process_reply(struct rpc_context *rpc, ZDR *zdr)

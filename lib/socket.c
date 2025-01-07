@@ -340,6 +340,12 @@ rpc_write_to_socket(struct rpc_context *rpc)
         while ((rpc->max_waitpdu_len == 0 ||
                 rpc->max_waitpdu_len > rpc->waitpdu_len) &&
                (pdu = rpc->outqueue.head) != NULL) {
+
+				if (rpc->use_azauth && rpc->auth_context.is_authorized == 0 && !pdu->is_head_prio)
+				{
+					RPC_LOG(rpc, 2, "Blocking pollouts as connection is not authorized to perform the same");
+					break;
+				}
                 int niov = 0;
                 uint32_t num_pdus = 0;
                 char *last_buf = NULL;
@@ -1745,6 +1751,21 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 }
 
 #ifdef HAVE_TLS
+
+/*
+ * During TCP reconnection, for secure transport, we need to re-perform auth. 
+ * This is the callback function called when auth completes.
+*/
+static void
+reconnect_cb_azauth(struct rpc_context *rpc, int status,
+		 void *command_data, void *private_data)
+{
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
+
+}
+
 /*
  * During TCP reconnection (either server or client closes connection) for secure
  * transport we need to perform the TLS handshake. This is the callback function
@@ -1779,6 +1800,19 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
 		return;
 	}
 
+	// Auth rpc call. 
+	if (rpc_perform_auth_verify(rpc, rpc->nfs_version,
+					  reconnect_cb_azauth, NULL) == NULL) {
+		RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_auth_verify() failed, "
+			"restarting connection!");
+		if (rpc->fd != -1) {
+			close(rpc->fd);
+			rpc->fd  = -1;
+		}
+		rpc->is_connected = 0;
+		rpc_reconnect_requeue(rpc);
+		return;
+		}
 	RPC_LOG(rpc, 2, "reconnect_cb_tls: TLS handshake completed successfully!");
 }
 #endif
