@@ -2717,14 +2717,16 @@ rpc_null_task(struct rpc_context *rpc, int program, int version,
 EXTERN struct rpc_pdu *
 rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 		      void *private_data);
-
+#endif /* HAVE_TLS */
 
 /*
- * Call <generic>/NULL RPC with AZ_AUTH in order to probe auth
- * support from the server, and if server supports auth, it sets the RBAC
- * permissions and verifies the token.
- * Callback will be called after auth completes (success or
- * failure) and not just after we get a response for this RPC.
+ * Authenticate and authorize the client with the server. Since each connection
+ * is separately authenticated, this must be called for each connection.
+ * It calls the callback registered through set_auth_token_callback() for
+ * querying the token, sends this token (and other required parameters) to the
+ * server using an AZAUTH RPC and updates rpc->auth_context as per the result
+ * of the auth returned by the server.
+ *
  * Function returns
  * pdu  : The command was queued successfully. The callback will be invoked once
  *        the command completes.
@@ -2739,9 +2741,7 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
  *                      data is NULL.
  */
 EXTERN struct rpc_pdu *
-rpc_perform_auth_verify(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
-		      void *private_data);
-#endif
+rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data);
 
 #ifdef __cplusplus
 }

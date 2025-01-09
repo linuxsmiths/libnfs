@@ -167,10 +167,35 @@ void rpc_add_to_outqueue_head(struct rpc_context *rpc, struct rpc_pdu *pdu)
 }
 
 /**
+ * Head priority pdu is a high prio pdu added to outqueue.head, ahead of all
+ * high (and low) prio pdus.
+ */
+void rpc_add_to_outqueue_headp(struct rpc_context *rpc, struct rpc_pdu *pdu)
+{
+        /*
+         * When rpc_add_to_outqueue_headp() is called there shouldn't be any
+         * partially sent pdu in the queue. It's typically called either when
+         * the connection is freshly created, at which time there are no pdus
+         * in outqueue, or on reconnect, at which time outqueue must have been
+         * reset and num_done must have been set to 0 for the head pdu.
+         */
+        assert(rpc->outqueue.head->out.num_done == 0);
+
+        pdu->is_head_prio = TRUE;
+        pdu->is_high_prio = TRUE;
+        rpc_add_to_outqueue_head(rpc, pdu);
+
+        assert(rpc->outqueue.head != NULL);
+        assert(rpc->outqueue.tail != NULL);
+        assert(rpc->outqueue.tailp != NULL);
+}
+
+/**
  * High priority pdus are added after tailp.
  */
 void rpc_add_to_outqueue_highp(struct rpc_context *rpc, struct rpc_pdu *pdu)
 {
+        assert(pdu->is_head_prio == FALSE);
         pdu->is_high_prio = TRUE;
         if (rpc->outqueue.tailp == NULL) {
                 /*
@@ -202,6 +227,7 @@ void rpc_add_to_outqueue_highp(struct rpc_context *rpc, struct rpc_pdu *pdu)
  */
 void rpc_add_to_outqueue_lowp(struct rpc_context *rpc, struct rpc_pdu *pdu)
 {
+        assert(pdu->is_head_prio == FALSE);
         pdu->is_high_prio = FALSE;
         rpc_enqueue(&rpc->outqueue, pdu);
         if (rpc->stats.outqueue_len++ == 0) {
@@ -728,6 +754,10 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
         char *buf;
 #endif /* HAVE_LIBKRB5 */
 
+        assert(prio == PDU_Q_PRIO_LOW ||
+               prio == PDU_Q_PRIO_HI ||
+               prio == PDU_Q_PRIO_HEAD);
+
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 #ifdef HAVE_LIBKRB5
@@ -935,12 +965,12 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
         /* Fresh PDU being queued to outqueue, num_done must be 0 */
         assert(pdu->out.num_done == 0);
 
-        if (prio == 0) {
+        if (prio == PDU_Q_PRIO_LOW) {
                 rpc_add_to_outqueue_lowp(rpc, pdu);
-        } else if (prio == 1) {
+        } else if (prio == PDU_Q_PRIO_HI) {
                 rpc_add_to_outqueue_highp(rpc, pdu);
         } else {
-                rpc_add_to_outqueue_head(rpc, pdu);
+                rpc_add_to_outqueue_headp(rpc, pdu);
         }
 
         send_now = (rpc->outqueue.head == pdu);
@@ -960,7 +990,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
 #endif /* HAVE_MULTITHREADING */
 
         /*
-         * If only PDU or a high priority PDU, send inline.
+         * If only PDU or a high/head priority PDU, send inline.
          */
         if (send_now) {
                 rpc_write_to_socket(rpc);
@@ -971,7 +1001,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
 
 int rpc_queue_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu)
 {
-        return rpc_queue_pdu2(rpc, pdu, 0 /* prio */);
+        return rpc_queue_pdu2(rpc, pdu, PDU_Q_PRIO_LOW);
 }
 
 static int rpc_process_reply(struct rpc_context *rpc, ZDR *zdr)

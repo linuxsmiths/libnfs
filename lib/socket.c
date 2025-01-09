@@ -141,7 +141,7 @@ set_nonblocking(int fd)
 static void
 set_nolinger(int fd)
 {
-#if !defined(PS2_EE)        
+#if !defined(PS2_EE)
 	struct linger lng;
 	lng.l_onoff = 1;
 	lng.l_linger = 0;
@@ -779,7 +779,7 @@ rpc_read_from_socket(struct rpc_context *rpc)
                 } else {
                         rpc_advance_cursor(rpc, &rpc->pdu->in, count);
                 }
-                
+
                 if (rpc->inpos == rpc->pdu_size) {
                         switch (rpc->state) {
                         case READ_RM:
@@ -868,7 +868,7 @@ rpc_read_from_socket(struct rpc_context *rpc)
                                  * that we have already read these 4 bytes in
                                  * PAYLOAD and FRAGMENT
                                  */
-                                rpc->inpos = 0;   
+                                rpc->inpos = 0;
 
                                 if (!rpc->is_server_context) {
                                         /* Unknown xid, either unsolicited
@@ -1232,7 +1232,7 @@ rpc_timeout_scan(struct rpc_context *rpc)
 
 /*
  * Returns -1 when the auth is enabled for the connection and token is expired.
- * We need to reconnect the connection in this case, to refresh the token. 
+ * We need to reconnect the connection in this case, to refresh the token.
  */
 static int
 rpc_auth_expired(struct rpc_context *rpc)
@@ -1241,9 +1241,9 @@ rpc_auth_expired(struct rpc_context *rpc)
 	if (rpc->auth_context.is_authorized == 1 && rpc->auth_context.expiry_time <= t)
 	{
 		RPC_LOG(rpc, 2, "Auth is enabled and token is expired, reconnecting the connection"
-				" to acquire a new token Current time: %ld, expirytime: %ld. Authstate: %d", 
+				" to acquire a new token Current time: %ld, expirytime: %ld. Authstate: %d",
 				t,
-				rpc->auth_context.expiry_time, 
+				rpc->auth_context.expiry_time,
 				rpc->auth_context.is_authorized);
 		rpc->auth_context.is_authorized = 0;
 		return -1;
@@ -1563,7 +1563,7 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 	{
 		struct sockaddr_storage ss;
 		struct sockaddr_in *sin;
-#if !defined(PS3_PPU) && !defined(PS2_EE)		
+#if !defined(PS3_PPU) && !defined(PS2_EE)
 		struct sockaddr_in6 *sin6;
 #endif
 		static int portOfs = 0;
@@ -1572,7 +1572,7 @@ rpc_connect_sockaddr_async(struct rpc_context *rpc)
 		int startOfs, port, rc;
 
 		sin  = (struct sockaddr_in *)&ss;
-#if !defined(PS3_PPU) && !defined(PS2_EE)        
+#if !defined(PS3_PPU) && !defined(PS2_EE)
 		sin6 = (struct sockaddr_in6 *)&ss;
 #endif
 		if (portOfs == 0) {
@@ -1753,17 +1753,31 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 #ifdef HAVE_TLS
 
 /*
- * During TCP reconnection, for secure transport, we need to re-perform auth. 
+ * During TCP reconnection, for secure transport, we need to re-perform auth.
  * This is the callback function called when auth completes.
 */
 static void
 reconnect_cb_azauth(struct rpc_context *rpc, int status,
-		 void *command_data, void *private_data)
+                    void *command_data, void *private_data)
 {
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+        assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-	RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
+        /* Must be called only for TLS transport */
+        assert(rpc->use_azauth);
 
+        if (!rpc->auth_context.is_authorized) {
+                RPC_LOG(rpc, 1, "reconnect_cb_azauth: AZAUTH failed, restarting connection!");
+
+                if (rpc->fd != -1) {
+                        close(rpc->fd);
+                        rpc->fd  = -1;
+                }
+                rpc->is_connected = 0;
+                rpc_reconnect_requeue(rpc);
+                return;
+        }
+
+        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
 }
 
 /*
@@ -1800,28 +1814,36 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
 		return;
 	}
 
-	// Auth rpc call. 
-	if (rpc_perform_auth_verify(rpc, rpc->nfs_version,
-					  reconnect_cb_azauth, NULL) == NULL) {
-		RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_auth_verify() failed, "
-			"restarting connection!");
-		if (rpc->fd != -1) {
-			close(rpc->fd);
-			rpc->fd  = -1;
-		}
-		rpc->is_connected = 0;
-		rpc_reconnect_requeue(rpc);
-		return;
-		}
 	RPC_LOG(rpc, 2, "reconnect_cb_tls: TLS handshake completed successfully!");
+
+        /*
+         * TLS handshake completed successfully.
+         * If azauth is enabled, perform it now.
+         */
+        if (rpc->use_azauth) {
+                RPC_LOG(rpc, 2, "reconnect_cb_tls: sending AZAUTH RPC");
+
+                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                        RPC_LOG(rpc, 1, "reconnect_cb_azauth: rpc_perform_azauth() failed, "
+                                        "restarting connection!");
+                        if (rpc->fd != -1) {
+                                close(rpc->fd);
+                                rpc->fd  = -1;
+                        }
+                        rpc->is_connected = 0;
+                        rpc_reconnect_requeue(rpc);
+                }
+        }
 }
-#endif
+#endif /* HAVE_TLS */
 
 static void
 reconnect_cb(struct rpc_context *rpc, int status, void *data,
              void *private_data)
 {
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	RPC_LOG(rpc, 2, "reconnect_cb called with status %d", status);
 
 	if (status != RPC_STATUS_SUCCESS) {
 		rpc_set_error(rpc, "Failed to reconnect async");
@@ -1837,8 +1859,9 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 	/*
 	 * For secure NFS connections, we need to setup TLS session now.
 	 */
-	RPC_LOG(rpc, 2, "reconnect_cb called with status %d", status);
 	if (rpc->use_tls) {
+                RPC_LOG(rpc, 2, "reconnect_cb: sending AUTH_TLS");
+
 		if (rpc_null_task_authtls(rpc, rpc->nfs_version,
 					  reconnect_cb_tls, NULL) == NULL) {
 			RPC_LOG(rpc, 1, "reconnect_cb: rpc_null_task_authtls() failed, "
@@ -1860,6 +1883,28 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 		}
 	}
 #endif /* HAVE_TLS */
+#ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
+        else if (rpc->use_azauth) {
+                /*
+                 * Insecure connection, if azauth is enabled perform auth.
+                 *
+                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
+                 */
+                RPC_LOG(rpc, 2, "reconnect_cb: sending AZAUTH RPC");
+
+                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                        RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
+                                        "restarting connection!");
+                        if (rpc->fd != -1) {
+                                close(rpc->fd);
+                                rpc->fd  = -1;
+                        }
+                        rpc->is_connected = 0;
+                        rpc_reconnect_requeue(rpc);
+                }
+        }
+#endif
 }
 
 /* Disconnect but do not error all PDUs, just move pdus in-flight back to the
@@ -1889,6 +1934,9 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
 	rpc->fd  = -1;
 	rpc->is_connected = 0;
 
+        /*
+         * TODO: Remove AZAUTH RPC from outqueue, as it'll be issued afresh.
+         */
 	if (rpc->outqueue.head) {
 		rpc->outqueue.head->out.num_done = 0;
 	}

@@ -272,39 +272,58 @@ struct tls_context {
 
 #define INC_STATS(rpc, stat) ++((rpc)->stats.stat)
 
-/*
- * Auth token callback received by auth_token_callback_t.
- * It is updated in the callback function and communicated here to call the AzAuth RPC with args and set expiry time in auth_context.
+/**
+ * Auth token info returned by get_token_callback_t.
+ * Call put_token_callback_t for freeing it.
  */
-struct auth_token_cb_res {
-        /* AZAUTH3args populated in callback function. */
+typedef struct auth_token_cb_res {
+        /*
+         * This is the AZAUTH3args which can be sent as-is to the server in
+         * an AzAuth RPC. This contains the token and other information that
+         * needs to be sent to the server.
+         */
         AZAUTH3args *args;
 
-        /* Expiry time of the token. It is in unix seconds since epoch format. */
-        uint64_t expiry_time;
-};
-typedef struct auth_token_cb_res auth_token_cb_res;
-
-struct auth_context {
-        /* Integer to tell if the connection is authorized
-         * It takes value=1 when connection is able to successfully perform auth. 
-         * For non-auth connections, it remains 0. 
+        /*
+         * Expiry time of the token contained in args.
+         * It is in seconds since unix epoch.
+         * libnfs will save this in auth_context.expiry_time and use it for
+         * refreshing the token before it expires.
          */
-        int is_authorized;
+        uint64_t expiry_time;
+} auth_token_cb_res;
 
-        /* Export path: It is of the format /account/container. */
+/**
+ * Auth related context information.
+ * It contains two types of information:
+ * - Information needed for querying the token to be used for auth.
+ *   These are opaue to libnfs and used by the get_token_callback_t.
+ * - Outcome of the auth process.
+ */
+struct auth_context {
+#define AUTH_CONTEXT_MAGIC *((const uint32_t *)"ACTX")
+
+        uint32_t magic;
+
+        /* /account/container for which the token is required */
         char *export_path;
 
-        /* Tenant id for which the token is required. */
+        /* Tenant id to use for querying the token */
         char *tenant_id;
 
-        /* Subscription id containing account/container. Used for token validation on server. */
+        /* Subscription id containing account/container */
         char *subscription_id;
 
-        /* AuthType: Current only support AzAuthAAD. */
+        /* AuthType, currently only AzAuthAAD is supported */
         char *auth_type;
 
-        /* Expiry time of the token. It is updated after successful auth_token_callback_t reception. */
+        /* Is this connection successfully authorized? */
+        bool_t is_authorized;
+
+        /*
+         * Expiry time of the token, updated after a successful call to
+         * get_token_callback_t.
+         */
         uint64_t expiry_time;
 };
 
@@ -472,10 +491,15 @@ struct rpc_context {
 	/* Context used for performing TLS handshake with the server */
 	struct tls_context tls_context;
 
-        /* Does the connection required to perform auth? */
-        int use_azauth;
-
-        /* Context used for performing auth check for the account/container mounted for.*/
+        /*
+         * Do we need to perform auth on connect/reconnect?
+         * If use_azauth is TRUE then a connection must send AZAUTH RPC as
+         * the very first RPC, to authn+authz the client with the server.
+         * If auth fails, no RPCs can be sent over the connection.
+         * If use_azauth is TRUE auth_context contains information needed for
+         * authn and authz and also holds the outcome of authn and authz.
+         */
+        bool_t use_azauth;
         struct auth_context auth_context;
 #endif /* HAVE_TLS */
 
@@ -527,6 +551,27 @@ struct rpc_pdu {
         uint64_t removed_from_waitpdu_at_time;
         uint32_t in_waitpdu;
 #endif
+
+        /*
+         * Queueing priority that can be passed to rpc_queue_pdu2().
+         * These have the following meaning:
+         * PDU_Q_PRIO_LOW  - PDU will be queued at rpc_context.outqueue.tail.
+         *                   This adds the pdu behind all queued pdus.
+         * PDU_Q_PRIO_HI   - PDU will be queued at rpc_context.outqueue.tailp.
+         *                   This adds the pdu to the tail of the high prio
+         *                   queue, behind already queued high prio pdus but
+         *                   ahead of all already queued low prio pdus.
+         *                   PDUs queued with PDU_Q_PRIO_HI will have
+         *                   is_high_prio set.
+         * PDU_Q_PRIO_HEAD - PDU will be queued at rpc_context.outqueue.head.
+         *                   This adds the pdu ahead of all queued pdus.
+         *                   PDUs queued with PDU_Q_PRIO_HEAD will have
+         *                   both is_head_prio and is_high_prio set.
+         */
+        #define PDU_Q_PRIO_LOW  0
+        #define PDU_Q_PRIO_HI   1
+        #define PDU_Q_PRIO_HEAD 2
+
         /*
          * Is it a high-prio pdu, added by rpc_add_to_outqueue_highp()?
          */
@@ -534,10 +579,13 @@ struct rpc_pdu {
 
         /*
          * Is it a head-prio pdu, currently used only by AzAuth RPC.
+         * If this is TRUE, is_high_prio will also be TRUE, since head prio
+         * pdu is a high priority pdu. This is done for proper updation of
+         * various outqueue pointers.
          */
         bool_t is_head_prio;
 
-	struct rpc_data outdata;
+        struct rpc_data outdata;
 
         /* For sending/receiving
          * out contains at least three vectors:
@@ -679,6 +727,7 @@ struct rpc_pdu {
 void rpc_reset_queue(struct rpc_queue *q);
 void rpc_enqueue(struct rpc_queue *q, struct rpc_pdu *pdu);
 void rpc_add_to_outqueue_head(struct rpc_context *rpc, struct rpc_pdu *pdu);
+void rpc_add_to_outqueue_headp(struct rpc_context *rpc, struct rpc_pdu *pdu);
 void rpc_add_to_outqueue_highp(struct rpc_context *rpc, struct rpc_pdu *pdu);
 void rpc_add_to_outqueue_lowp(struct rpc_context *rpc, struct rpc_pdu *pdu);
 void rpc_return_to_outqueue(struct rpc_context *rpc, struct rpc_pdu *pdu);
