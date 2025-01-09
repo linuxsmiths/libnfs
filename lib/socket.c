@@ -1838,8 +1838,13 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
         /* Must be called only for TLS transport */
         assert(rpc->use_azauth);
 
+        /*
+         * During reconnect, if azauth fails, we have no choice but to keep
+         * trying.
+         */
         if (!rpc->auth_context.is_authorized) {
-                RPC_LOG(rpc, 1, "reconnect_cb_azauth: AZAUTH failed, restarting connection!");
+                RPC_LOG(rpc, 1, "reconnect_cb_azauth: AZAUTH failed, "
+                                "restarting connection!");
 
                 if (rpc->fd != -1) {
                         close(rpc->fd);

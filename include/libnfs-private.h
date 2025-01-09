@@ -243,8 +243,10 @@ enum input_state {
 
 #ifdef HAVE_TLS
 struct tls_cb_data {
-	rpc_cb cb;
-	void *private_data;
+#define TLS_CB_DATA_MAGIC *((const uint32_t *) "TLCD")
+        uint32_t magic;
+        rpc_cb cb;
+        void *private_data;
 };
 
 typedef enum tls_handshake_state {
@@ -320,8 +322,10 @@ struct auth_context {
 };
 
 struct azauth_cb_data {
-	rpc_cb cb;
-	void *private_data;
+#define AZAUTH_CB_DATA_MAGIC *((const uint32_t *) "AZCD")
+        uint32_t magic;
+        rpc_cb cb;
+        void *private_data;
 };
 
 struct gss_ctx_id_struct;

@@ -919,13 +919,15 @@ rpc_connect_program_6_cb(struct rpc_context *rpc, int status,
 
 void free_azauth_cb_data(struct azauth_cb_data *data)
 {
-	free(data);
+        assert(data->magic == AZAUTH_CB_DATA_MAGIC);
+        free(data);
 }
 
 #ifdef HAVE_TLS
 void free_tls_cb_data(struct tls_cb_data *data)
 {
-	free(data);
+        assert(data->magic == TLS_CB_DATA_MAGIC);
+        free(data);
 }
 
 /*
@@ -939,6 +941,8 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                            void *command_data, void *private_data)
 {
         struct azauth_cb_data *data = private_data;
+
+        assert(data->magic == AZAUTH_CB_DATA_MAGIC);
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
         /* Must be called only when use_azauth is true */
@@ -984,10 +988,17 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const u_int server_id_len = res->AZAUTH3res_u.resok.serverid.serverid_len;
         const char *server_id_val = res->AZAUTH3res_u.resok.serverid.serverid_val;
+        char serverid[32];
 
-        /* TODO: Log the non null-terminated string server_id_val */
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%d",
-                server_version, server_id_len);
+        strncpy(serverid, server_id_val, server_id_len);
+        serverid[server_id_len] = '\0';
+
+        /*
+         * serverid can technically contain non-printable bytes, though we use
+         * printable bytes only, so printing like the following should be fine.
+         */
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%d Served id=%s",
+                server_version, server_id_len, serverid);
 
         assert(server_version);
         assert(server_id_len > 0);
@@ -1015,6 +1026,7 @@ rpc_connect_program_4_1_cb(struct rpc_context *rpc, int status,
 {
 	struct tls_cb_data *data = private_data;
 
+        assert(data->magic == TLS_CB_DATA_MAGIC);
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	RPC_LOG(rpc, 2, "Got AUTH_TLS response, status=%d", status);
@@ -2830,6 +2842,7 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 			      "for AUTH_TLS NULL call");
 		return NULL;
 	}
+	data->magic        = TLS_CB_DATA_MAGIC;
 	data->cb 	   = cb;
 	data->private_data = private_data;
 
@@ -2889,8 +2902,11 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
                 return NULL;
         }
 
+        data->magic        = AZAUTH_CB_DATA_MAGIC;
         data->cb           = cb;
         data->private_data = private_data;
+
+        RPC_LOG(rpc, 2, "Sending AZAUTH RPC");
 
         pdu = rpc_nfs3_azauth_task(rpc, rpc_connect_program_4_2_cb,
                                    res->args, data);
