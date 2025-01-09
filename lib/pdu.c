@@ -173,6 +173,12 @@ void rpc_add_to_outqueue_head(struct rpc_context *rpc, struct rpc_pdu *pdu)
 void rpc_add_to_outqueue_headp(struct rpc_context *rpc, struct rpc_pdu *pdu)
 {
         /*
+         * AZAUTH RPC is the only one queued with head priority and
+         * AZAUTH RPC MUST only be sent if use_azauth is true.
+         */
+        assert(rpc->use_azauth);
+
+        /*
          * When rpc_add_to_outqueue_headp() is called there shouldn't be any
          * partially sent pdu in the queue. It's typically called either when
          * the connection is freshly created, at which time there are no pdus

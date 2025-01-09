@@ -1244,7 +1244,7 @@ rpc_timeout_scan(struct rpc_context *rpc)
 
 
 /*
- * Returns -1 when the auth is enabled for the connection and token is expired.
+ * Returns TRUE when the auth is enabled for the connection and token is expired.
  * We need to reconnect the connection in this case, to refresh the token.
  */
 bool_t
@@ -1265,9 +1265,8 @@ rpc_auth_expired(struct rpc_context *rpc)
 	if (rpc->auth_context.is_authorized && now >= refresh_at) {
 		RPC_LOG(rpc, 1, "Auth token about to expire (or expired), "
 		                "reconnecting to acquire a new token. "
-		                "refresh_at: %ld, now: %ld, is_authorized: %d",
-				refresh_at, now,
-				rpc->auth_context.is_authorized);
+		                "refresh_at: %ld, now: %ld",
+				refresh_at, now);
 		rpc->auth_context.is_authorized = FALSE;
 		return TRUE;
 	}
