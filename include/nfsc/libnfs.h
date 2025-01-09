@@ -143,30 +143,30 @@ EXTERN int nfs_queue_length(struct nfs_context *nfs);
 /*
  * Returns the tenant id stored in the opaque auth_context structure.
  * Used by the get_token_callback_t implementation to retrieve the tenantid
- * initially stored by nfs_set_auth_context().
+ * previously stored by nfs_set_auth_context().
  */
-EXTERN char *nfs_get_tenantid(struct auth_context *auth);
+EXTERN const char *nfs_get_tenantid(const struct auth_context *auth);
 
 /*
  * Returns the subscription id stored in the opaque auth_context structure.
  * Used by the get_token_callback_t implementation to retrieve the
- * subscription id initially stored by nfs_set_auth_context().
+ * subscription id previously stored by nfs_set_auth_context().
  */
-EXTERN char *nfs_get_subscriptionid(struct auth_context *auth);
+EXTERN const char *nfs_get_subscriptionid(const struct auth_context *auth);
 
 /*
  * Returns the export path stored in the opaque auth_context structure.
  * Used by the get_token_callback_t implementation to retrieve the
- * export path initially stored by nfs_set_auth_context().
+ * export path previously stored by nfs_set_auth_context().
  */
-EXTERN char *nfs_get_exportpath(struct auth_context *auth);
+EXTERN const char *nfs_get_exportpath(const struct auth_context *auth);
 
 /*
  * Returns the authtype stored in the opaque auth_context structure.
  * Used by the get_token_callback_t implementation to retrieve the
- * authtype initially stored by nfs_set_auth_context().
+ * authtype previously stored by nfs_set_auth_context().
  */
-EXTERN char *nfs_get_authtype(struct auth_context *auth);
+EXTERN const char *nfs_get_authtype(const struct auth_context *auth);
 
 /*
  * Sets the AZAUTH3args args in auth_token_cb_res.
@@ -259,7 +259,7 @@ EXTERN void nfs_destroy_context(struct nfs_context *nfs);
 
 /*
  * Function pointer type for getting auth token.
- * It takes the auth_context, fetches the token for this context i.e for the tenant,
+ * It takes the auth_context, fetches the token for this context i.e., for the tenant,
  * performs sanity checks and prepares the AZAUTH3args to be passed to rpc_nfs3_azauth_task.
  * It returns auth_token_cb_res containing AZAUTH3args and expiry time of the token fetched.
  */
@@ -351,16 +351,12 @@ EXTERN int nfs_set_hash_size(struct nfs_context *nfs, int hashes);
  */
 EXTERN struct nfs_url *nfs_parse_url_full(struct nfs_context *nfs,
                                           const char *url);
-/*
- * Used to set whether auth is required for this connection in the nfs_context.
-*/
-EXTERN int nfs_use_azauth(struct nfs_context *nfs,
-                          int use_azauth);
 
 /*
  * Used to set values in auth_context present in nfs->rpc.
- * It is only set if connection uses auth.
-*/
+ * User should call this function IFF they want to enable auth for the given
+ * nfs_context.
+ */
 EXTERN int nfs_set_auth_context(struct nfs_context *nfs,
                                 const char *export_path,
                                 const char *tenantid,

@@ -341,11 +341,18 @@ rpc_write_to_socket(struct rpc_context *rpc)
                 rpc->max_waitpdu_len > rpc->waitpdu_len) &&
                (pdu = rpc->outqueue.head) != NULL) {
 
-				if (rpc->use_azauth && rpc->auth_context.is_authorized == 0 && !pdu->is_head_prio)
-				{
-					RPC_LOG(rpc, 2, "Blocking pollouts as connection is not authorized to perform the same");
-					break;
-				}
+                /*
+                 * If context demands auth and connection is not authorized,
+                 * only send AZAUTH RPCs out.
+                 */
+                if (rpc->use_azauth &&
+                    !rpc->auth_context.is_authorized &&
+                    !pdu->is_head_prio) {
+                        RPC_LOG(rpc, 2, "Not sending queued RPC request as "
+                                        "connection is not authorized");
+                        break;
+                }
+
                 int niov = 0;
                 uint32_t num_pdus = 0;
                 char *last_buf = NULL;
@@ -1237,15 +1244,22 @@ rpc_timeout_scan(struct rpc_context *rpc)
 static int
 rpc_auth_expired(struct rpc_context *rpc)
 {
-	uint64_t t = (long)time(NULL);
-	if (rpc->auth_context.is_authorized == 1 && rpc->auth_context.expiry_time <= t)
-	{
-		RPC_LOG(rpc, 2, "Auth is enabled and token is expired, reconnecting the connection"
-				" to acquire a new token Current time: %ld, expirytime: %ld. Authstate: %d",
-				t,
+        /*
+         * Refresh token 5 min before expiry, to avoid situation where we
+         * send some RPC requests to the server and by the time they are
+         * processed at the server, token expires and the requests are failed.
+         */
+	const uint64_t refresh_at = (uint64_t) time(NULL) - 300;
+
+	if (rpc->auth_context.is_authorized &&
+	    rpc->auth_context.expiry_time <= refresh_at) {
+		RPC_LOG(rpc, 1, "Auth token expired, reconnecting the connection "
+				"to acquire a new token. refresh_at: %ld, "
+				"expirytime: %ld. is_authorized: %d",
+				refresh_at,
 				rpc->auth_context.expiry_time,
 				rpc->auth_context.is_authorized);
-		rpc->auth_context.is_authorized = 0;
+		rpc->auth_context.is_authorized = FALSE;
 		return -1;
 	}
 
@@ -1883,6 +1897,7 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 		}
 	}
 #endif /* HAVE_TLS */
+
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
         else if (rpc->use_azauth) {
                 /*

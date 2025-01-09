@@ -274,9 +274,9 @@ struct tls_context {
 
 /**
  * Auth token info returned by get_token_callback_t.
- * Call put_token_callback_t for freeing it.
+ * Must call put_token_callback_t for freeing it.
  */
-typedef struct auth_token_cb_res {
+struct auth_token_cb_res {
         /*
          * This is the AZAUTH3args which can be sent as-is to the server in
          * an AzAuth RPC. This contains the token and other information that
@@ -287,22 +287,23 @@ typedef struct auth_token_cb_res {
         /*
          * Expiry time of the token contained in args.
          * It is in seconds since unix epoch.
-         * libnfs will save this in auth_context.expiry_time and use it for
-         * refreshing the token before it expires.
+         * libnfs will save this in auth_context.expiry_time and use it to
+         * correctly refresh the token before it expires.
          */
         uint64_t expiry_time;
-} auth_token_cb_res;
+};
 
 /**
  * Auth related context information.
  * It contains two types of information:
  * - Information needed for querying the token to be used for auth.
- *   These are opaue to libnfs and used by the get_token_callback_t.
+ *   These are saved and read by the user and are opaue to libnfs.
  * - Outcome of the auth process.
+ *   These are used by libnfs.
  */
-struct auth_context {
-#define AUTH_CONTEXT_MAGIC *((const uint32_t *)"ACTX")
+#define AUTH_CONTEXT_MAGIC *((const uint32_t *) "ACTX")
 
+struct auth_context {
         uint32_t magic;
 
         /* /account/container for which the token is required */
@@ -317,14 +318,22 @@ struct auth_context {
         /* AuthType, currently only AzAuthAAD is supported */
         char *auth_type;
 
-        /* Is this connection successfully authorized? */
+        /*
+         * Is this connection successfully authorized?
+         * Updated after a successful call to get_token_callback_t.
+         */
         bool_t is_authorized;
 
         /*
-         * Expiry time of the token, updated after a successful call to
-         * get_token_callback_t.
+         * Expiry time of the token.
+         * Updated after a successful call to get_token_callback_t.
          */
         uint64_t expiry_time;
+};
+
+struct azauth_cb_data {
+	rpc_cb cb;
+	void *private_data;
 };
 
 struct gss_ctx_id_struct;
@@ -493,6 +502,9 @@ struct rpc_context {
 
         /*
          * Do we need to perform auth on connect/reconnect?
+         * This starts as FALSE and is set to TRUE if user calls
+         * nfs_set_auth_context() to convey his intent to use auth for this
+         * rpc_context.
          * If use_azauth is TRUE then a connection must send AZAUTH RPC as
          * the very first RPC, to authn+authz the client with the server.
          * If auth fails, no RPCs can be sent over the connection.

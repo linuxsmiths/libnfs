@@ -218,67 +218,82 @@ nfs_queue_length(struct nfs_context *nfs)
 	return rpc_queue_length(nfs->rpc);
 }
 
-char *
-nfs_get_tenantid(struct auth_context *auth)
+const char *
+nfs_get_tenantid(const struct auth_context *auth)
 {
+        assert(auth->magic == AUTH_CONTEXT_MAGIC);
 	return auth->tenant_id;
 }
 
-char *
-nfs_get_subscriptionid(struct auth_context *auth)
+const char *
+nfs_get_subscriptionid(const struct auth_context *auth)
 {
+        assert(auth->magic == AUTH_CONTEXT_MAGIC);
 	return auth->subscription_id;
 }
 
-char *
-nfs_get_exportpath(struct auth_context *auth)
+const char *
+nfs_get_exportpath(const struct auth_context *auth)
 {
+        assert(auth->magic == AUTH_CONTEXT_MAGIC);
 	return auth->export_path;
 }
 
-char *
-nfs_get_authtype(struct auth_context *auth)
+const char *
+nfs_get_authtype(const struct auth_context *auth)
 {
+        assert(auth->magic == AUTH_CONTEXT_MAGIC);
 	return auth->auth_type;
 }
 
 void
-nfs_set_azauth_expirytime(auth_token_cb_res *auth, uint64_t expiry_time)
+nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time)
 {
+        assert(expiry_time != 0);
+        assert(expiry_time >= time(NULL));
+
 	auth->expiry_time = expiry_time;
 }
 
 void
-nfs_set_azauth_azauthargs(auth_token_cb_res *auth, AZAUTH3args *args)
+nfs_set_azauth_azauthargs(struct auth_token_cb_res *auth, AZAUTH3args *args)
 {
+        assert(args);
+        assert(args->client_version);
+        assert(args->clientid.clientid_len > 0);
+        assert(args->clientid.clientid_val);
+        assert(args->authtype);
+        assert(args->authtarget);
+        assert(args->authdata);
+
 	auth->args = args;
 }
 
-// Static variable to hold the registered callback.
+/* Static variables to hold the registered get/put token callbacks */
 static get_token_callback_t get_auth_token_cb = NULL;
 static put_token_callback_t put_auth_token_cb = NULL;
 
-// Implementation to set the get_token_callback_t.
 void
 set_auth_token_callback(get_token_callback_t get_cb,
                         put_token_callback_t put_cb)
 {
+        assert(get_cb);
+        assert(put_cb);
+
         get_auth_token_cb = get_cb;
         put_auth_token_cb = put_cb;
 }
 
-// Implementation to trigger the get_token_callback_t.
-static auth_token_cb_res *
+static struct auth_token_cb_res *
 get_azauth_token(struct auth_context *auth)
 {
-	auth_token_cb_res *res = get_auth_token_cb(auth);
-	return res;
+	return get_auth_token_cb(auth);
 }
 
 static void
 put_azauth_token(struct auth_token_cb_res *res)
 {
-	put_auth_token_cb(res);
+	return put_auth_token_cb(res);
 }
 
 int
@@ -616,8 +631,16 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                          const char *subscriptionid,
                          const char *authtype)
 {
+        assert(export_path);
+        assert(tenantid);
+        assert(subscriptionid);
+        assert(authtype);
+
         if (nfs->rpc) {
 #ifndef ENABLE_INSECURE_AUTH_FOR_DEVTEST
+                /*
+                 * If not devtest, don't allow auth unless transport is secure.
+                 */
                 if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
                         return -1;
@@ -634,6 +657,7 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                 nfs->rpc->auth_context.auth_type = strdup(authtype);
                 nfs->rpc->auth_context.is_authorized = FALSE;
                 nfs->rpc->auth_context.expiry_time = 0;
+
                 return 0;
         }
         return -1;
@@ -912,16 +936,18 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         struct rpc_cb_data *data = private_data;
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
+        /* Must be called only when use_azauth is true */
         assert(rpc->use_azauth);
+        /* rpc_perform_azauth() MUST have set is_authorized to FALSE */
+        assert(rpc->auth_context.is_authorized == FALSE);
 
         if (status != RPC_STATUS_SUCCESS) {
-                RPC_LOG(rpc, 1, "AZAUTH failure, status = %d", status);
+                RPC_LOG(rpc, 1, "AZAUTH RPC failure, status = %d", status);
+
                 data->cb(rpc, status, command_data, data->private_data);
                 free_rpc_cb_data(data);
                 return;
         }
-
-        RPC_LOG(rpc, 2, "AZAUTH successful");
 
         /*
          * For successful AZAUTH, command_data should contain AZAUTH3res as
@@ -931,32 +957,43 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
 
         const AZAUTH3res *const res = command_data;
 
-        RPC_LOG(rpc, 2, "AZAUTH status=%d", res->status);
-
         /* Must be a valid NFS status */
         assert(nfsstat3_to_errno(res->status) != -ERANGE);
 
         if (res->status != NFS3_OK) {
-                data->cb(rpc, status, command_data, data->private_data);
+                RPC_LOG(rpc, 1, "AZAUTH NFS failure, status = %s",
+                        nfsstat3_to_str(res->status));
+
+                /*
+                 * Caller doesn't care if it's NFS error or RPC error.
+                 * For any failure we should call the callback with failed
+                 * status.
+                 */
+                data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
                 free_rpc_cb_data(data);
                 return;
         }
+
+        RPC_LOG(rpc, 2, "AZAUTH successful!");
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const u_int server_id_len = res->AZAUTH3res_u.resok.serverid.serverid_len;
         const char *server_id_val = res->AZAUTH3res_u.resok.serverid.serverid_val;
 
         /* TODO: Log the non null-terminated string server_id_val */
-        RPC_LOG(rpc, 2, "AZAUTH response=%d Server version=%s Server id len=%d",
-                res->status, server_version, server_id_len);
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%d",
+                server_version, server_id_len);
 
         assert(server_version);
         assert(server_id_len > 0);
         assert(server_id_val);
 
         /* AZAUTH RPC successful, connection is now authorized */
-        rpc->auth_context.is_authorized = 1;
+        rpc->auth_context.is_authorized = TRUE;
 
+        /*
+         * Now that AZAUTH is successful, call the next in chain.
+         */
         data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
         free_rpc_cb_data(data);
 }
@@ -1080,22 +1117,23 @@ static void
 rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                            void *command_data, void *private_data)
 {
-	struct rpc_cb_data *data = private_data;
+        struct rpc_cb_data *data = private_data;
 
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+        assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-	/* rpc_connect_program_5_0_cb MUST be called only when TLS is enabled */
-	assert(rpc->use_tls);
+        /* rpc_connect_program_5_0_cb() MUST be called only for TLS connections */
+        assert(rpc->use_tls);
 
-	/* Dont want any more callbacks even if the socket is closed */
-	rpc->connect_cb = NULL;
+        /* Dont want any more callbacks even if the socket is closed */
+        rpc->connect_cb = NULL;
 
-	if (status != RPC_STATUS_SUCCESS) {
+        if (status != RPC_STATUS_SUCCESS) {
                 assert(rpc->tls_context.state != TLS_HANDSHAKE_COMPLETED);
-		data->cb(rpc, status, command_data, data->private_data);
-		free_rpc_cb_data(data);
-		return;
-	}
+
+                data->cb(rpc, status, command_data, data->private_data);
+                free_rpc_cb_data(data);
+                return;
+        }
 
         /*
          * TLS handshake is completed.
@@ -1106,12 +1144,14 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
         if (rpc->use_azauth) {
                 if (rpc_perform_azauth(rpc, rpc_connect_program_5_cb,
                                        data) == NULL) {
-                        data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
-			free_rpc_cb_data(data);
+                        data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
+                        free_rpc_cb_data(data);
+                        return;
                 }
         } else {
-                data->cb(rpc, status, NULL, data->private_data);
+                data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
                 free_rpc_cb_data(data);
+                return;
         }
 }
 
@@ -2817,7 +2857,11 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 }
 #endif /* HAVE_TLS */
 
-#ifdef HAVE_TLS
+void free_azauth_cb_data(struct azauth_cb_data *data)
+{
+	free(data);
+}
+
 struct rpc_pdu *
 rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 {
@@ -2826,8 +2870,9 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
         struct rpc_pdu *pdu;
-        auth_token_cb_res *res = get_azauth_token(&rpc->auth_context);
+        struct auth_token_cb_res *res = get_azauth_token(&rpc->auth_context);
         if (!res) {
+                RPC_LOG(rpc, 1, "get_azauth_token() failed!");
                 return NULL;
         }
 
@@ -2837,18 +2882,28 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 
         AZAUTH3args *args_res = res->args;
 
+        rpc->auth_context.is_authorized = FALSE;
         rpc->auth_context.expiry_time = res->expiry_time;
 
+        struct azauth_cb_data *data = calloc(1, sizeof(*data));
+        if (data == NULL) {
+                put_azauth_token(res);
+                rpc_set_error(rpc, "Out of memory. Failed to allocate azauth_cb_data");
+                return NULL;
+        }
+
+        data->cb           = cb;
+        data->private_data = private_data;
+
         pdu = rpc_nfs3_azauth_task(rpc, rpc_connect_program_4_2_cb,
-                                   args_res, private_data);
+                                   args_res, data);
         if (pdu == NULL) {
                 put_azauth_token(res);
                 rpc_set_error(rpc, "AZAUTH RPC failed to set pdu");
-                free_rpc_cb_data(private_data);
+                free_azauth_cb_data(data);
                 return NULL;
         }
 
         put_azauth_token(res);
         return pdu;
 }
-#endif /* HAVE_TLS */
