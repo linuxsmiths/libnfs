@@ -1006,8 +1006,29 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
          * If only PDU or a high/head priority PDU, send inline.
          */
         if (send_now) {
+                /*
+                 * We need to check if the token has expired, before we issue
+                 * the RPC, else we can have the following problem:
+                 * - user has not used the mount for a long time, and in the
+                 *   meantime the token expired.
+                 * - now user uses the mount which issues a command from fuse.
+                 * - the command comes here and since it's the first request
+                 *   to be queued in outqueue, send_now is true and we send the
+                 *   request over to the server.
+                 * - server fails the requuest with "permission denied" as the
+                 *   auth token has expired.
+                 *
+                 * If the token has expired we do not send the request, but
+                 * instead wake up rpc_service() thread, which again calls
+                 * rpc_auth_needs_refresh() and triggers a reconnect.
+                 * This will queue the AZAUTH RPC ahead of this request,
+                 * perform the reconnect and auth refresh and once the refresh
+                 * is successful, issue this new request.
+                 */
                 if (rpc_auth_needs_refresh(rpc)) {
-                        RPC_LOG(rpc, 2, "Waking up rpc_service to refresh auth token!");
+                        RPC_LOG(rpc, 2, "Waking up rpc_service to refresh "
+                                        "auth token, not sending pdu %p",
+                                        pdu);
 
                         /*
                          * Wakeup rpc_service() thread which will refresh the

@@ -403,8 +403,13 @@ rpc_write_to_socket(struct rpc_context *rpc)
 #ifdef ENABLE_PARANOID
                         assert(pdu->in_outqueue == PDU_PRESENT);
                         assert(pdu->in_waitpdu == PDU_ABSENT);
-#endif
 
+                        if (pdu->is_head_prio) {
+                                RPC_LOG(rpc, 2, "rpc_write_to_socket: Sending "
+                                                "AZAUTH PDU %p", pdu);
+                        }
+
+#endif
                         /* Fully sent PDU should not be sitting in outqueue */
                         assert(num_done < pdu->out.total_size);
 
@@ -1254,8 +1259,12 @@ rpc_timeout_scan(struct rpc_context *rpc)
 
 
 /*
- * Returns TRUE when the auth is enabled for the connection and token is expired.
+ * Returns TRUE when the auth is enabled for the connection and token has
+ * expired, needing a refresh.
  * We need to reconnect the connection in this case, to refresh the token.
+ * This is edge trigerred, i.e., it returns true till we initiate the
+ * reconnect (which will eventually refresh the token) and not till the token
+ * is refreshed.
  */
 bool_t
 rpc_auth_needs_refresh(struct rpc_context *rpc)
@@ -1268,6 +1277,11 @@ rpc_auth_needs_refresh(struct rpc_context *rpc)
 		return FALSE;
 	}
 
+        /*
+         * Once marked "needs refresh" return true till it's reset.
+         * This must be placed before the is_authorized check below, as on
+         * expiry we set is_authorized to FALSE and needs_refresh to TRUE.
+         */
 	if (rpc->auth_context.needs_refresh) {
 	        return TRUE;
 	}
@@ -1319,7 +1333,7 @@ rpc_service(struct rpc_context *rpc, int revents)
 	 * connection. Schedule reconnect and requeue and return. Once the new
 	 * connection is ready, events will be processed for that.
 	 */
-	if ((rpc_timeout_scan(rpc) != 0 ) || rpc_auth_needs_refresh(rpc)) {
+	if ((rpc_timeout_scan(rpc) != 0) || rpc_auth_needs_refresh(rpc)) {
 		return rpc_reconnect_requeue(rpc);
 	}
 
@@ -2000,7 +2014,9 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
 
 	/*
 	 * As part of reconnect handling, auth token will be refreshed if
-	 * needed, now we can clear needs_refresh.
+	 * needed, now we can clear needs_refresh. Note the reconnect handling
+	 * is resilient and it'll keep trying till reconnect (and anything else
+	 * needed, i.e., TLS handshake, and/or auth refresh) succeeds.
 	 */
 	rpc->auth_context.needs_refresh = FALSE;
 
