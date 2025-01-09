@@ -998,6 +998,18 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
          * If only PDU or a high/head priority PDU, send inline.
          */
         if (send_now) {
+                if (rpc_auth_expired() < 0) {
+                        /*
+                         * Wakeup rpc_service() thread which will refresh the
+                         * cert and issue the RPC after that.
+                         */
+                        uint64_t evwrite = 1;
+                        [[maybe_unused]] ssize_t evbytes =
+                                write(rpc_get_evfd(rpc), &evwrite, sizeof(evwrite));
+                        assert(evbytes == 8);
+                        return 0;
+                }
+
                 rpc_write_to_socket(rpc);
         }
 

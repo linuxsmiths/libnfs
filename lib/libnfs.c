@@ -917,6 +917,11 @@ rpc_connect_program_6_cb(struct rpc_context *rpc, int status,
 }
 #endif /* HAVE_LIBKRB5 */
 
+void free_azauth_cb_data(struct azauth_cb_data *data)
+{
+	free(data);
+}
+
 #ifdef HAVE_TLS
 void free_tls_cb_data(struct tls_cb_data *data)
 {
@@ -933,7 +938,7 @@ static void
 rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                            void *command_data, void *private_data)
 {
-        struct rpc_cb_data *data = private_data;
+        struct azauth_cb_data *data = private_data;
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
         /* Must be called only when use_azauth is true */
@@ -945,7 +950,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                 RPC_LOG(rpc, 1, "AZAUTH RPC failure, status = %d", status);
 
                 data->cb(rpc, status, command_data, data->private_data);
-                free_rpc_cb_data(data);
+                free_azauth_cb_data(data);
                 return;
         }
 
@@ -970,7 +975,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                  * status.
                  */
                 data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
-                free_rpc_cb_data(data);
+                free_azauth_cb_data(data);
                 return;
         }
 
@@ -995,7 +1000,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
          * Now that AZAUTH is successful, call the next in chain.
          */
         data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
-        free_rpc_cb_data(data);
+        free_azauth_cb_data(data);
 }
 
 /*
@@ -1149,8 +1154,7 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                         return;
                 }
         } else {
-                data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
-                free_rpc_cb_data(data);
+                rpc_connect_program_5_cb(rpc, RPC_STATUS_SUCCESS, NULL, data);
                 return;
         }
 }
@@ -2857,11 +2861,6 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 }
 #endif /* HAVE_TLS */
 
-void free_azauth_cb_data(struct azauth_cb_data *data)
-{
-	free(data);
-}
-
 struct rpc_pdu *
 rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 {
@@ -2880,8 +2879,6 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         assert(res->expiry_time != 0);
         assert(res->expiry_time >= time(NULL));
 
-        AZAUTH3args *args_res = res->args;
-
         rpc->auth_context.is_authorized = FALSE;
         rpc->auth_context.expiry_time = res->expiry_time;
 
@@ -2896,7 +2893,7 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         data->private_data = private_data;
 
         pdu = rpc_nfs3_azauth_task(rpc, rpc_connect_program_4_2_cb,
-                                   args_res, data);
+                                   res->args, data);
         if (pdu == NULL) {
                 put_azauth_token(res);
                 rpc_set_error(rpc, "AZAUTH RPC failed to set pdu");

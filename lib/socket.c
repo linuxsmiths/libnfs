@@ -1783,6 +1783,9 @@ static void
 reconnect_cb_azauth(struct rpc_context *rpc, int status,
                     void *command_data, void *private_data)
 {
+        /* reconnect_cb_tls() passes NULL as private_data */
+        assert(private_data == NULL);
+
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
         /* Must be called only for TLS transport */
@@ -1812,6 +1815,8 @@ static void
 reconnect_cb_tls(struct rpc_context *rpc, int status,
 		 void *command_data, void *private_data)
 {
+        /* reconnect_cb() passes NULL as private_data */
+        assert(private_data == NULL);
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
 	/* Must be called only for TLS transport */
@@ -1915,7 +1920,7 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
                  * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
                  *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
                  */
-                RPC_LOG(rpc, 2, "reconnect_cb: sending AZAUTH RPC");
+                RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
 
                 if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
                         RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
