@@ -1250,13 +1250,32 @@ rpc_timeout_scan(struct rpc_context *rpc)
 bool_t
 rpc_auth_expired(struct rpc_context *rpc)
 {
-        /*
-         * Refresh token sufficiently before expiry, to avoid situation where
-         * we send some RPC request(s) to the server and by the time they are
-         * processed at the server, token expires and the requests are failed.
-         * 5 min should be sufficient, as no request can sit in the server for
-         * more than ~1 min.
-         */
+	/*
+	 * If not using azauth, we should not proceed further and return from
+	 * here.
+	 */
+	if (!rpc->use_azauth) {
+		return FALSE;
+	}
+
+	/*
+	 * If connection is not authorized, we need not check for expiry time
+	 * as it will not be set. 
+	 * It is important to check because rpc_service will be running and this
+	 * function will keep getting called. We should check for expiry only when 
+	 * connection is authorized. 
+	 */
+	if (!rpc->auth_context.is_authorized) {
+		return FALSE;
+	}
+
+	/*
+	 * Refresh token sufficiently before expiry, to avoid situation where
+	 * we send some RPC request(s) to the server and by the time they are
+	 * processed at the server, token expires and the requests are failed.
+	 * 5 min should be sufficient, as no request can sit in the server for
+	 * more than ~1 min.
+	 */
 	const uint64_t refresh_at = rpc->auth_context.expiry_time - 300;
 	const uint64_t now = (uint64_t) time(NULL);
 

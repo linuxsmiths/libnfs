@@ -185,7 +185,9 @@ void rpc_add_to_outqueue_headp(struct rpc_context *rpc, struct rpc_pdu *pdu)
          * in outqueue, or on reconnect, at which time outqueue must have been
          * reset and num_done must have been set to 0 for the head pdu.
          */
-        assert(rpc->outqueue.head->out.num_done == 0);
+        if (rpc->outqueue.head != NULL) {
+                assert(rpc->outqueue.head->out.num_done == 0);
+        }
 
         pdu->is_head_prio = TRUE;
         pdu->is_high_prio = TRUE;
@@ -1005,6 +1007,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
          */
         if (send_now) {
                 if (rpc_auth_expired(rpc)) {
+                        RPC_LOG(rpc, 2, "Setting the fd as token is expired to call the service again");
                         /*
                          * Wakeup rpc_service() thread which will refresh the
                          * cert and issue the RPC after that.

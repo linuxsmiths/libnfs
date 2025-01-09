@@ -50,7 +50,27 @@ struct rpc_context;
 
 struct auth_context;
 struct AZAUTH3args;
-struct auth_token_cb_res;
+
+/**
+ * Auth token info returned by get_token_callback_t.
+ * Must call put_token_callback_t for freeing it.
+ */
+struct auth_token_cb_res {
+        /*
+         * This is the AZAUTH3args which can be sent as-is to the server in
+         * an AzAuth RPC. This contains the token and other information that
+         * needs to be sent to the server.
+         */
+        struct AZAUTH3args *args;
+
+        /*
+         * Expiry time of the token contained in args.
+         * It is in seconds since unix epoch.
+         * libnfs will save this in auth_context.expiry_time and use it to
+         * correctly refresh the token before it expires.
+         */
+        uint64_t expiry_time;
+};
 
 struct nfs_url {
 	char *server;
