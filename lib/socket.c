@@ -1948,14 +1948,6 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
 	}
 	rpc->fd  = -1;
 	rpc->is_connected = 0;
-
-        /*
-         * TODO: Remove AZAUTH RPC from outqueue, as it'll be issued afresh.
-         */
-	if (rpc->outqueue.head) {
-		rpc->outqueue.head->out.num_done = 0;
-	}
-
 	rpc->inpos = 0;
 	rpc->state = READ_RM;
 
@@ -1968,6 +1960,44 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
                 nfs_mt_mutex_lock(&rpc->rpc_mutex);
         }
 #endif /* HAVE_MULTITHREADING */
+
+	if (rpc->outqueue.head) {
+		rpc->outqueue.head->out.num_done = 0;
+
+                /*
+                 * If there's an AZAUTH RPC in the outqueue, remove it as a
+                 * fresh AZAUTH RPC is issued on reconnect.
+                 */
+                pdu = rpc->outqueue.head;
+
+                if (pdu->is_head_prio) {
+                        RPC_LOG(rpc, 1, "rpc_reconnect_requeue: Removing AZAUTH "
+                                        "RPC pdu %p from outqueue", pdu);
+
+                        rpc->outqueue.head = pdu->next;
+                        if (rpc->outqueue.head == NULL)
+                                rpc->outqueue.tail = NULL;
+
+                        /*
+                         * Last high priority pdu dequeued, no more
+                         * high priority pdus in outqueue.
+                         */
+                        if (rpc->outqueue.tailp == pdu)
+                                rpc->outqueue.tailp = NULL;
+
+                        assert(rpc->stats.outqueue_len > 0);
+                        rpc->stats.outqueue_len--;
+
+#ifdef ENABLE_PARANOID
+                        pdu->in_outqueue = PDU_ABSENT;
+                        pdu->removed_from_outqueue_at_line = __LINE__;
+                        pdu->removed_from_outqueue_at_time = rpc_wallclock_time();
+#endif
+
+                        rpc_free_pdu(rpc, pdu);
+                }
+	}
+
 	for (i = 0; i < rpc->num_hashes; i++) {
 		struct rpc_queue *q = &rpc->waitpdu[i];
 		for (pdu = q->head; pdu; pdu = next) {

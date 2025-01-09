@@ -554,8 +554,8 @@ struct rpc_pdu *rpc_nfs3_azauth_task(struct rpc_context *rpc, rpc_cb cb,
 	}
 
 	/*
-	 * We want to add AzAuth RPC to outqueue head as we want to send it
-	 * before any other request(s).
+	 * We add AzAuth RPC to outqueue head as we want to send it before any
+	 * other request(s).
 	 */
 	if (rpc_queue_pdu2(rpc, pdu, PDU_Q_PRIO_HEAD) != 0) {
 		rpc_set_error(rpc, "Out of memory. Failed to queue pdu for NFS3/AZAUTH call");
@@ -564,7 +564,6 @@ struct rpc_pdu *rpc_nfs3_azauth_task(struct rpc_context *rpc, rpc_cb cb,
 
 	return pdu;
 }
-
 
 struct rpc_pdu *
 rpc_nfs3_setattr_task(struct rpc_context *rpc, rpc_cb cb, SETATTR3args *args,
