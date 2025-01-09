@@ -341,24 +341,6 @@ rpc_write_to_socket(struct rpc_context *rpc)
                 rpc->max_waitpdu_len > rpc->waitpdu_len) &&
                (pdu = rpc->outqueue.head) != NULL) {
 
-                /*
-                 * AZAUTH RPC is the only one queued with head priority and
-                 * AZAUTH RPC MUST only be sent if use_azauth is true.
-                 */
-                assert(!pdu->is_head_prio || rpc->use_azauth);
-
-                /*
-                 * If context needs auth and connection is not authorized (yet),
-                 * only send AZAUTH RPCs out.
-                 */
-                if (rpc->use_azauth &&
-                        !rpc->auth_context.is_authorized &&
-                        !pdu->is_head_prio) {
-                                RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
-                                                "connection is not authorized", pdu);
-                                break;
-                        } 
-
                 int niov = 0;
                 uint32_t num_pdus = 0;
                 char *last_buf = NULL;
@@ -387,16 +369,33 @@ rpc_write_to_socket(struct rpc_context *rpc)
 
                 do {
                         /*
+                         * AZAUTH RPC is the only one queued with head priority and
+                         * AZAUTH RPC MUST only be sent if use_azauth is true.
+                         */
+                        assert(!pdu->is_head_prio || rpc->use_azauth);
+
+                        /*
                          * If context needs auth and connection is not authorized (yet),
-                         * only send AZAUTH RPCs out.
+                         * only ever send AZAUTH RPCs out.
                          */
                         if (rpc->use_azauth &&
-                        !rpc->auth_context.is_authorized &&
-                        !pdu->is_head_prio) {
+                            !rpc->auth_context.is_authorized &&
+                            !pdu->is_head_prio) {
                                 RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
-                                break;
-                        } 
+                                /*
+                                 * If we have something to write, write it, else
+                                 * exit. Note that the only pdu we will be
+                                 * writing would be the AZAUTH RPC.
+                                 */
+                                if (niov) {
+                                        break;
+                                } else {
+                                        ret = 0;
+                                        goto finished;
+                                }
+                        }
+
                         size_t num_done = pdu->out.num_done;
                         int pdu_niov = pdu->out.niov;
                         int i;
@@ -1259,7 +1258,7 @@ rpc_timeout_scan(struct rpc_context *rpc)
  * We need to reconnect the connection in this case, to refresh the token.
  */
 bool_t
-rpc_auth_expired(struct rpc_context *rpc)
+rpc_auth_needs_refresh(struct rpc_context *rpc)
 {
 	/*
 	 * If not using azauth, we should not proceed further and return from
@@ -1267,6 +1266,10 @@ rpc_auth_expired(struct rpc_context *rpc)
 	 */
 	if (!rpc->use_azauth) {
 		return FALSE;
+	}
+
+	if (rpc->auth_context.needs_refresh) {
+	        return TRUE;
 	}
 
 	/*
@@ -1297,6 +1300,8 @@ rpc_auth_expired(struct rpc_context *rpc)
 		                "reconnecting to acquire a new token. "
 		                "refresh_at: %ld, now: %ld",
 				refresh_at, now);
+		rpc->auth_context.is_authorized = FALSE;
+		rpc->auth_context.needs_refresh = TRUE;
 		return TRUE;
 	}
 
@@ -1314,8 +1319,7 @@ rpc_service(struct rpc_context *rpc, int revents)
 	 * connection. Schedule reconnect and requeue and return. Once the new
 	 * connection is ready, events will be processed for that.
 	 */
-	if ((rpc_timeout_scan(rpc) != 0 ) || rpc_auth_expired(rpc)) {
-                rpc->auth_context.is_authorized = FALSE;
+	if ((rpc_timeout_scan(rpc) != 0 ) || rpc_auth_needs_refresh(rpc)) {
 		return rpc_reconnect_requeue(rpc);
 	}
 
@@ -1993,6 +1997,12 @@ rpc_reconnect_requeue(struct rpc_context *rpc)
 	rpc->is_connected = 0;
 	rpc->inpos = 0;
 	rpc->state = READ_RM;
+
+	/*
+	 * As part of reconnect handling, auth token will be refreshed if
+	 * needed, now we can clear needs_refresh.
+	 */
+	rpc->auth_context.needs_refresh = FALSE;
 
 	/* Socket is closed so we will not get any replies to any commands
 	 * in flight. Move them all over from the waitpdu queue back to the

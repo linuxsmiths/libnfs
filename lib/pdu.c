@@ -1006,8 +1006,9 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
          * If only PDU or a high/head priority PDU, send inline.
          */
         if (send_now) {
-                if (rpc_auth_expired(rpc)) {
-                        RPC_LOG(rpc, 2, "Wakeing rpc_service() thread which will refresh the cert");
+                if (rpc_auth_needs_refresh(rpc)) {
+                        RPC_LOG(rpc, 2, "Waking up rpc_service to refresh auth token!");
+
                         /*
                          * Wakeup rpc_service() thread which will refresh the
                          * cert and issue the RPC after that.

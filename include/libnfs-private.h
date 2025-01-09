@@ -300,11 +300,20 @@ struct auth_context {
         /*
          * Is this connection successfully authorized?
          * Updated after a successful call to get_token_callback_t.
+         * Cleared on token expiry.
          */
         bool_t is_authorized;
 
         /*
-         * Expiry time of the token.
+         * Does the token need to be refreshed?
+         * This is edge trigerred. It's set once when we discover that the
+         * current token has expired and then cleared once we setup reconnect
+         * which will eventually refresh the token.
+         */
+        bool_t needs_refresh;
+
+        /*
+         * Expiry time of the current token.
          * Updated after a successful call to get_token_callback_t.
          */
         uint64_t expiry_time;
@@ -1189,7 +1198,7 @@ int nfs4_write_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                      void *private_data);
 
 int rpc_write_to_socket(struct rpc_context *rpc);
-bool_t rpc_auth_expired(struct rpc_context *rpc);
+bool_t rpc_auth_needs_refresh(struct rpc_context *rpc);
 int _nfs_mount_async(struct nfs_context *nfs, const char *server,
                      const char *exportname, nfs_cb cb,
                      void *private_data);
