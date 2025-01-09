@@ -1210,6 +1210,7 @@ int nfs4_write_async(struct nfs_context *nfs, struct nfsfh *nfsfh,
                      void *private_data);
 
 int rpc_write_to_socket(struct rpc_context *rpc);
+bool_t rpc_auth_expired(struct rpc_context *rpc);
 int _nfs_mount_async(struct nfs_context *nfs, const char *server,
                      const char *exportname, nfs_cb cb,
                      void *private_data);
