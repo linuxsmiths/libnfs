@@ -1007,7 +1007,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
          */
         if (send_now) {
                 if (rpc_auth_expired(rpc)) {
-                        RPC_LOG(rpc, 2, "Setting the fd as token is expired to call the service again");
+                        RPC_LOG(rpc, 2, "Wakeing rpc_service() thread which will refresh the cert");
                         /*
                          * Wakeup rpc_service() thread which will refresh the
                          * cert and issue the RPC after that.

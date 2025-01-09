@@ -352,12 +352,12 @@ rpc_write_to_socket(struct rpc_context *rpc)
                  * only send AZAUTH RPCs out.
                  */
                 if (rpc->use_azauth &&
-                    !rpc->auth_context.is_authorized &&
-                    !pdu->is_head_prio) {
-                        RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
-                                        "connection is not authorized", pdu);
-                        break;
-                }
+                        !rpc->auth_context.is_authorized &&
+                        !pdu->is_head_prio) {
+                                RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
+                                                "connection is not authorized", pdu);
+                                break;
+                        } 
 
                 int niov = 0;
                 uint32_t num_pdus = 0;
@@ -386,6 +386,17 @@ rpc_write_to_socket(struct rpc_context *rpc)
                 }
 
                 do {
+                        /*
+                         * If context needs auth and connection is not authorized (yet),
+                         * only send AZAUTH RPCs out.
+                         */
+                        if (rpc->use_azauth &&
+                        !rpc->auth_context.is_authorized &&
+                        !pdu->is_head_prio) {
+                                RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
+                                                "connection is not authorized", pdu);
+                                break;
+                        } 
                         size_t num_done = pdu->out.num_done;
                         int pdu_niov = pdu->out.niov;
                         int i;
@@ -424,7 +435,7 @@ rpc_write_to_socket(struct rpc_context *rpc)
                         }
 
                         num_pdus++;
-                        pdu = pdu->next;
+                        pdu = pdu->next;      
                 } while ((rpc->max_waitpdu_len == 0 ||
                           rpc->max_waitpdu_len > (rpc->waitpdu_len + num_pdus)) &&
                          pdu != NULL && niov < iovcnt);
@@ -1286,7 +1297,6 @@ rpc_auth_expired(struct rpc_context *rpc)
 		                "reconnecting to acquire a new token. "
 		                "refresh_at: %ld, now: %ld",
 				refresh_at, now);
-		rpc->auth_context.is_authorized = FALSE;
 		return TRUE;
 	}
 
@@ -1305,6 +1315,7 @@ rpc_service(struct rpc_context *rpc, int revents)
 	 * connection is ready, events will be processed for that.
 	 */
 	if ((rpc_timeout_scan(rpc) != 0 ) || rpc_auth_expired(rpc)) {
+                rpc->auth_context.is_authorized = FALSE;
 		return rpc_reconnect_requeue(rpc);
 	}
 
