@@ -633,6 +633,11 @@ void rpc_free_pdu(struct rpc_context *rpc, struct rpc_pdu *pdu)
 #endif /* HAVE_LIBKRB5 */
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+        /*
+         * AZAUTH RPC is the only one queued with head priority and
+         * AZAUTH RPC MUST only be sent if use_azauth is true.
+         */
+        assert(!pdu->is_head_prio || rpc->use_azauth);
 
 #ifdef ENABLE_PARANOID
         /* PDU must be freed only after removing from all queues */

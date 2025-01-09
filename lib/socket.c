@@ -342,14 +342,20 @@ rpc_write_to_socket(struct rpc_context *rpc)
                (pdu = rpc->outqueue.head) != NULL) {
 
                 /*
-                 * If context demands auth and connection is not authorized,
+                 * AZAUTH RPC is the only one queued with head priority and
+                 * AZAUTH RPC MUST only be sent if use_azauth is true.
+                 */
+                assert(!pdu->is_head_prio || rpc->use_azauth);
+
+                /*
+                 * If context needs auth and connection is not authorized (yet),
                  * only send AZAUTH RPCs out.
                  */
                 if (rpc->use_azauth &&
                     !rpc->auth_context.is_authorized &&
                     !pdu->is_head_prio) {
-                        RPC_LOG(rpc, 2, "Not sending queued RPC request as "
-                                        "connection is not authorized");
+                        RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
+                                        "connection is not authorized", pdu);
                         break;
                 }
 
@@ -1245,19 +1251,22 @@ static int
 rpc_auth_expired(struct rpc_context *rpc)
 {
         /*
-         * Refresh token 5 min before expiry, to avoid situation where we
-         * send some RPC requests to the server and by the time they are
+         * Refresh token sufficiently before expiry, to avoid situation where
+         * we send some RPC request(s) to the server and by the time they are
          * processed at the server, token expires and the requests are failed.
+         * 5 min should be sufficient, as no request can sit in the server for
+         * more than ~1 min.
          */
-	const uint64_t refresh_at = (uint64_t) time(NULL) - 300;
+	const uint64_t refresh_at = rpc->auth_context.expiry_time - 300;
+	const uint64_t now = (uint64_t) time(NULL);
 
-	if (rpc->auth_context.is_authorized &&
-	    rpc->auth_context.expiry_time <= refresh_at) {
-		RPC_LOG(rpc, 1, "Auth token expired, reconnecting the connection "
-				"to acquire a new token. refresh_at: %ld, "
-				"expirytime: %ld. is_authorized: %d",
-				refresh_at,
-				rpc->auth_context.expiry_time,
+	assert((int64_t) refresh_at > 0);
+
+	if (rpc->auth_context.is_authorized && now >= refresh_at) {
+		RPC_LOG(rpc, 1, "Auth token about to expire (or expired), "
+		                "reconnecting to acquire a new token. "
+		                "refresh_at: %ld, now: %ld, is_authorized: %d",
+				refresh_at, now,
 				rpc->auth_context.is_authorized);
 		rpc->auth_context.is_authorized = FALSE;
 		return -1;
