@@ -174,23 +174,6 @@ EXTERN const char *nfs_get_tenantid(const struct auth_context *auth);
  */
 EXTERN const char *nfs_get_subscriptionid(const struct auth_context *auth);
 
-
-/*
- * Sets the azauth_data in auth_token_cb_res.
- * Used by the get_token_callback_t implementation to set azauth_data
- * in the returned auth_token_cb_res.
- */
-EXTERN void nfs_set_azauth_authdata(struct auth_token_cb_res *auth,
-                                    char *azauth_data);
-
-/*
- * Sets the expiry_time in auth_token_cb_res.
- * Used by the get_token_callback_t implementation to set expiry_time
- * in the returned auth_token_cb_res.
- */
-EXTERN void nfs_set_azauth_expirytime(struct auth_token_cb_res *auth,
-                                      uint64_t expiry_time);
-
 /*
  * Used if you need different credentials than the default for the current user.
  */

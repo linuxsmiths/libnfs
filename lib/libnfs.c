@@ -232,23 +232,6 @@ nfs_get_subscriptionid(const struct auth_context *auth)
 	return auth->subscription_id;
 }
 
-void
-nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time)
-{
-        assert(expiry_time != 0);
-        assert(expiry_time >= time(NULL));
-
-	auth->expiry_time = expiry_time;
-}
-
-void
-nfs_set_azauth_authdata(struct auth_token_cb_res *auth, char *azauth_data)
-{
-        assert(azauth_data);
-
-        auth->azauth_data = azauth_data;
-}
-
 /* Static variables to hold the registered get/put token callbacks */
 static get_token_callback_t get_auth_token_cb = NULL;
 
