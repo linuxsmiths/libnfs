@@ -299,6 +299,13 @@ struct auth_context {
         /* AuthType, currently only AzAuthAAD is supported */
         char *auth_type;
 
+        /* Version of the client which initiates the auth request */
+        char *client_version;
+
+        /* ID of the client which initiates the auth request */
+        char *client_id;
+
+
         /*
          * Is this connection successfully authorized?
          * Updated after a successful call to get_token_callback_t.

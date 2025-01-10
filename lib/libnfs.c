@@ -232,20 +232,6 @@ nfs_get_subscriptionid(const struct auth_context *auth)
 	return auth->subscription_id;
 }
 
-const char *
-nfs_get_exportpath(const struct auth_context *auth)
-{
-        assert(auth->magic == AUTH_CONTEXT_MAGIC);
-	return auth->export_path;
-}
-
-const char *
-nfs_get_authtype(const struct auth_context *auth)
-{
-        assert(auth->magic == AUTH_CONTEXT_MAGIC);
-	return auth->auth_type;
-}
-
 void
 nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time)
 {
@@ -256,32 +242,22 @@ nfs_set_azauth_expirytime(struct auth_token_cb_res *auth, uint64_t expiry_time)
 }
 
 void
-nfs_set_azauth_azauthargs(struct auth_token_cb_res *auth, AZAUTH3args *args)
+nfs_set_azauth_authdata(struct auth_token_cb_res *auth, char *azauth_data)
 {
-        assert(args);
-        assert(args->client_version);
-        assert(args->clientid.clientid_len > 0);
-        assert(args->clientid.clientid_val);
-        assert(args->authtype);
-        assert(args->authtarget);
-        assert(args->authdata);
+        assert(azauth_data);
 
-	auth->args = args;
+        auth->azauth_data = azauth_data;
 }
 
 /* Static variables to hold the registered get/put token callbacks */
 static get_token_callback_t get_auth_token_cb = NULL;
-static put_token_callback_t put_auth_token_cb = NULL;
 
 void
-set_auth_token_callback(get_token_callback_t get_cb,
-                        put_token_callback_t put_cb)
+set_auth_token_callback(get_token_callback_t get_cb)
 {
         assert(get_cb);
-        assert(put_cb);
 
         get_auth_token_cb = get_cb;
-        put_auth_token_cb = put_cb;
 }
 
 static struct auth_token_cb_res *
@@ -291,9 +267,53 @@ get_azauth_token(struct auth_context *auth)
 }
 
 static void
-put_azauth_token(struct auth_token_cb_res *res)
+free_azauth_token_cb(struct auth_token_cb_res *res, AZAUTH3args *args)
 {
-	return put_auth_token_cb(res);
+        if (!res && !args) {
+                return; // Nothing to free if res is nullptr.
+        }
+ 
+        // Free the nested AZAUTH3args structure if it exists
+        if (args) {
+                // Free client_version, if exists
+                if (args->client_version) {
+                        free(args->client_version);
+                }
+        
+                // Free clientid_val, if exists
+                if (args->clientid.clientid_val) {
+                        free(args->clientid.clientid_val);
+                }
+        
+                // Free authtype, if exists
+                if (args->authtype) {
+                        free(args->authtype);
+                }
+        
+                // Free authtarget, if exists
+                if (args->authtarget) {
+                        free(args->authtarget);
+                }
+        
+                // Free authdata, if exists
+                if (args->authdata) {
+                        free(args->authdata);
+                }
+
+                // Delete the AZAUTH3args structure itself
+                free(args);
+        }
+
+        if (res) {
+                // Free authdata, if exists
+                if (res->azauth_data) {
+                        free(res->azauth_data);
+                }
+
+                // Free the auth_token_cb_res structure.
+                free(res);
+        }
+
 }
 
 int
@@ -629,12 +649,16 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                          const char *export_path,
                          const char *tenantid,
                          const char *subscriptionid,
-                         const char *authtype)
+                         const char *authtype,
+                         const char *client_version,
+                         const char *client_id)
 {
         assert(export_path);
         assert(tenantid);
         assert(subscriptionid);
         assert(authtype);
+        assert(client_version);
+        assert(client_id);
 
         if (nfs->rpc) {
 #ifndef ENABLE_INSECURE_AUTH_FOR_DEVTEST
@@ -655,6 +679,8 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                 nfs->rpc->auth_context.tenant_id = strdup(tenantid);
                 nfs->rpc->auth_context.subscription_id = strdup(subscriptionid);
                 nfs->rpc->auth_context.auth_type = strdup(authtype);
+                nfs->rpc->auth_context.client_version = strdup(client_version);
+                nfs->rpc->auth_context.client_id = strdup(client_id);
                 nfs->rpc->auth_context.is_authorized = FALSE;
                 nfs->rpc->auth_context.expiry_time = 0;
 
@@ -988,16 +1014,14 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const u_int server_id_len = res->AZAUTH3res_u.resok.serverid.serverid_len;
         const char *server_id_val = res->AZAUTH3res_u.resok.serverid.serverid_val;
-        char serverid[32];
 
-        strncpy(serverid, server_id_val, server_id_len);
-        serverid[server_id_len] = '\0';
+        const uint64_t serverid = *(uint64_t *)server_id_val;
 
         /*
          * serverid can technically contain non-printable bytes, though we use
          * printable bytes only, so printing like the following should be fine.
          */
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%d Served id=%s",
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%u Served id=%lu",
                 server_version, server_id_len, serverid);
 
         assert(server_version);
@@ -2888,16 +2912,33 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
                 return NULL;
         }
 
-        assert(res->args);
+        assert(res->azauth_data);
         assert(res->expiry_time != 0);
         assert(res->expiry_time >= time(NULL));
+
+        AZAUTH3args *azauthargs = (AZAUTH3args*)malloc(sizeof(AZAUTH3args));;
+
+        azauthargs->client_version = strdup(rpc->auth_context.client_version);
+        azauthargs->clientid.clientid_len = strlen(rpc->auth_context.client_id);
+        azauthargs->clientid.clientid_val = strdup(rpc->auth_context.client_id);
+
+        azauthargs->authtype = strdup(rpc->auth_context.auth_type);
+        azauthargs->authtarget = strdup(rpc->auth_context.export_path);
+
+        azauthargs->authdata = strdup(res->azauth_data);        
 
         rpc->auth_context.is_authorized = FALSE;
         rpc->auth_context.expiry_time = res->expiry_time;
 
+        RPC_LOG(rpc, 2, "AZAuth3Args: client_version: %s, client_id: %s, authtype: %s, authtarget: %s",
+                azauthargs->client_version,
+                azauthargs->clientid.clientid_val,
+                azauthargs->authtype,
+                azauthargs->authtarget);
+
         struct azauth_cb_data *data = calloc(1, sizeof(*data));
         if (data == NULL) {
-                put_azauth_token(res);
+                free_azauth_token_cb(res, azauthargs);
                 rpc_set_error(rpc, "Out of memory. Failed to allocate azauth_cb_data");
                 return NULL;
         }
@@ -2909,14 +2950,14 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         RPC_LOG(rpc, 2, "Sending AZAUTH RPC");
 
         pdu = rpc_nfs3_azauth_task(rpc, rpc_connect_program_4_2_cb,
-                                   res->args, data);
+                                   azauthargs, data);
         if (pdu == NULL) {
-                put_azauth_token(res);
+                free_azauth_token_cb(res, azauthargs);
                 rpc_set_error(rpc, "AZAUTH RPC failed to set pdu");
                 free_azauth_cb_data(data);
                 return NULL;
         }
 
-        put_azauth_token(res);
+        free_azauth_token_cb(res, azauthargs);
         return pdu;
 }
