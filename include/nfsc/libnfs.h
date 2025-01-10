@@ -56,10 +56,10 @@ struct AZAUTH3args;
  */
 struct auth_token_cb_res {
         /*
-         * This is the auth data set by the caller.
-         * It contains a json string containing token and other relevant data
-         * required in the AZAUTH3args passed through AzAuth RPC
-         * to the server for validation. 
+         * This is the auth token set by the caller.
+         * It is a json string containing token and other relevant data
+         * sent as-is to the server in the AZAUTH3args.authdata arg of AzAuth
+         * RPC.
          */
         char *azauth_data;
 
