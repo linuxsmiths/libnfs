@@ -430,7 +430,7 @@ zdr_AZAUTH3args (ZDR *zdrs, AZAUTH3args *objp)
 {
 	 if (!zdr_string (zdrs, &objp->client_version, 16))
 		 return FALSE;
-	 if (!zdr_bytes (zdrs, (char **)&objp->clientid.clientid_val, (u_int *) &objp->clientid.clientid_len, 8))
+	 if (!zdr_bytes (zdrs, (char **)&objp->clientid.clientid_val, (u_int *) &objp->clientid.clientid_len, 16))
 		 return FALSE;
 	 if (!zdr_string (zdrs, &objp->authtype, 16))
 		 return FALSE;

@@ -218,20 +218,6 @@ nfs_queue_length(struct nfs_context *nfs)
 	return rpc_queue_length(nfs->rpc);
 }
 
-const char *
-nfs_get_tenantid(const struct auth_context *auth)
-{
-        assert(auth->magic == AUTH_CONTEXT_MAGIC);
-	return auth->tenant_id;
-}
-
-const char *
-nfs_get_subscriptionid(const struct auth_context *auth)
-{
-        assert(auth->magic == AUTH_CONTEXT_MAGIC);
-	return auth->subscription_id;
-}
-
 /* Static variables to hold the registered get/put token callbacks */
 static get_token_callback_t get_auth_token_cb = NULL;
 
@@ -598,15 +584,11 @@ flags:
 
 int nfs_set_auth_context(struct nfs_context *nfs,
                          const char *export_path,
-                         const char *tenantid,
-                         const char *subscriptionid,
                          const char *authtype,
                          const char *client_version,
                          const char *client_id)
 {
         assert(export_path);
-        assert(tenantid);
-        assert(subscriptionid);
         assert(authtype);
         assert(client_version);
         assert(client_id);
@@ -627,8 +609,6 @@ int nfs_set_auth_context(struct nfs_context *nfs,
 
                 nfs->rpc->auth_context.magic = AUTH_CONTEXT_MAGIC;
                 nfs->rpc->auth_context.export_path = strdup(export_path);
-                nfs->rpc->auth_context.tenant_id = strdup(tenantid);
-                nfs->rpc->auth_context.subscription_id = strdup(subscriptionid);
                 nfs->rpc->auth_context.auth_type = strdup(authtype);
                 nfs->rpc->auth_context.client_version = strdup(client_version);
                 nfs->rpc->auth_context.client_id = strdup(client_id);
