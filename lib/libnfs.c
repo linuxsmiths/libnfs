@@ -242,7 +242,7 @@ free_azauth_token(struct auth_token_cb_res *res, AZAUTH3args *args)
         assert(res && args);
 
         free(args->client_version);
-        free(args->clientid.clientid_val);
+        free(args->clientid);
         free(args->authtype);
         free(args->authtarget);
         free(args->authdata);
@@ -943,20 +943,13 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         RPC_LOG(rpc, 2, "AZAUTH successful!");
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
-        const u_int server_id_len = res->AZAUTH3res_u.resok.serverid.serverid_len;
-        const char *server_id_val = res->AZAUTH3res_u.resok.serverid.serverid_val;
+        const char *server_id= res->AZAUTH3res_u.resok.serverid;
 
         assert(server_version);
-        assert(server_id_len == 8);
-        assert(server_id_val);
+        assert(server_id);
 
-        /*
-         * serverid is encoded as an integer by the server.
-         */
-        const uint64_t serverid = *(uint64_t *) server_id_val;
-
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id len=%u Served id=%lu",
-                server_version, server_id_len, serverid);
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Served id=%s",
+                server_version, server_id);
 
         /* AZAUTH RPC successful, connection is now authorized */
         rpc->auth_context.is_authorized = TRUE;
@@ -2849,8 +2842,7 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         AZAUTH3args azauthargs;
 
         azauthargs.client_version = strdup(rpc->auth_context.client_version);
-        azauthargs.clientid.clientid_len = strlen(rpc->auth_context.client_id);
-        azauthargs.clientid.clientid_val = strdup(rpc->auth_context.client_id);
+        azauthargs.clientid = strdup(rpc->auth_context.client_id);
         azauthargs.authtype = strdup(rpc->auth_context.auth_type);
         azauthargs.authtarget = strdup(rpc->auth_context.export_path);
         azauthargs.authdata = strdup(res->azauth_data);
@@ -2858,7 +2850,7 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         RPC_LOG(rpc, 2, "AZAuth3Args: client_version: %s, client_id: %s, "
                         "authtype: %s, authtarget: %s",
                 azauthargs.client_version,
-                azauthargs.clientid.clientid_val,
+                azauthargs.clientid,
                 azauthargs.authtype,
                 azauthargs.authtarget);
 
