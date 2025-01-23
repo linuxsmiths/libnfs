@@ -943,7 +943,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         RPC_LOG(rpc, 2, "AZAUTH successful!");
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
-        const char *server_id= res->AZAUTH3res_u.resok.serverid;
+        const char *server_id = res->AZAUTH3res_u.resok.serverid;
 
         assert(server_version);
         assert(server_id);
