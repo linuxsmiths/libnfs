@@ -2266,10 +2266,15 @@ rpc_queue_length(struct rpc_context *rpc)
                 nfs_mt_mutex_lock(&rpc->rpc_mutex);
         }
 #endif /* HAVE_MULTITHREADING */
+
+#ifdef ENABLE_PARANOID
 	for(pdu = rpc->outqueue.head; pdu; pdu = pdu->next) {
 		i++;
 	}
         assert(rpc->stats.outqueue_len == i);
+#else
+        i = rpc->stats.outqueue_len;
+#endif
 
 	i += rpc->waitpdu_len;
 #ifdef HAVE_MULTITHREADING
