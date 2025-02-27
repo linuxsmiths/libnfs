@@ -99,7 +99,7 @@ static void *nfs_mt_service_thread(void *arg)
         
 		ret = poll(pfd, 2, nfs->rpc->poll_timeout);
 		if (ret < 0) {
-			nfs_set_error(nfs, "Poll failed");
+			nfs_set_error(nfs, "Poll failed: %s", strerror(errno));
 			revents = -1;
 		} else {
                         if (pfd[0].revents != 0) {
@@ -114,9 +114,16 @@ static void *nfs_mt_service_thread(void *arg)
 
 			revents = pfd[1].revents;
 		}
+
+		/*
+		 * nfs_service() failing is an unusual condition, take a pause
+		 * before retrying.
+		 */
 		if (nfs_service(nfs, revents) < 0) {
-			if (revents != -1)
-				nfs_set_error(nfs, "nfs_service failed");
+                        nfs_set_error(nfs, "nfs_service failed, revents=0x%x",
+                                      revents);
+                        RPC_LOG(rpc, 2, "Sleeping 5 secs, before retrying!");
+                        sleep(5);
 		}
 	}
         return NULL;
