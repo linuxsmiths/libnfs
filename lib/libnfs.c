@@ -611,7 +611,9 @@ int nfs_set_auth_context(struct nfs_context *nfs,
 #endif
                 assert(nfs->rpc->use_azauth == FALSE);
 
-                nfs->rpc->use_azauth = TRUE;
+                if (!strcmp(authtype,"AzAuthAAD")) {
+                        nfs->rpc->use_azauth = TRUE;
+                }
 
                 nfs->rpc->auth_context.magic = AUTH_CONTEXT_MAGIC;
                 nfs->rpc->auth_context.export_path = strdup(export_path);
@@ -908,8 +910,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         assert(data->magic == AZAUTH_CB_DATA_MAGIC);
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
-        /* Must be called only when use_azauth is true */
-        assert(rpc->use_azauth);
+
         /* rpc_perform_azauth() MUST have set is_authorized to FALSE */
         assert(rpc->auth_context.is_authorized == FALSE);
 
@@ -950,12 +951,14 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const char *server_id = res->AZAUTH3res_u.resok.serverid;
+        const uint64_t server_cap_map = res->AZAUTH3res_u.resok.server_cap_map;
 
         assert(server_version);
         assert(server_id);
+        assert(server_cap_map);
 
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Served id=%s",
-                server_version, server_id);
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Served id=%s Server Capabilities=%llu",
+                server_version, server_id, server_cap_map);
 
         /* AZAUTH RPC successful, connection is now authorized */
         rpc->auth_context.is_authorized = TRUE;
@@ -2830,8 +2833,6 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 struct rpc_pdu *
 rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 {
-        /* MUST be called only if use_azauth is enabled */
-        assert(rpc->use_azauth);
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
         struct rpc_pdu *pdu;

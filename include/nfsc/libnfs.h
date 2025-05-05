@@ -72,6 +72,13 @@ struct auth_token_cb_res {
         uint64_t expiry_time;
 };
 
+struct azauth_res_cb {
+        /*
+         * 
+         */
+         uint64_t server_cap_map;
+}
+
 struct nfs_url {
 	char *server;
 	char *path;
@@ -252,6 +259,19 @@ typedef struct auth_token_cb_res *(*get_token_callback_t)(struct auth_context *a
  * Function to set get_token_callback_t.
  */
 EXTERN void set_auth_token_callback(get_token_callback_t get_cb);
+
+/*
+ * Function pointer type for setting azauth response values to turbo cl.
+ * It takes the auth_context, fetches the token for this context i.e., for the tenant,
+ * performs sanity checks and prepares the AZAUTH3args to be passed to rpc_nfs3_azauth_task.
+ * It returns auth_token_cb_res containing AZAUTH3args and expiry time of the token fetched.
+ */
+ typedef bool status (*get_azauth_res_callback_t)(struct azauth_res_cb *auth);
+
+/*
+ * Function to set get_azauth_res_callback_t.
+ */
+EXTERN void set_azauth_res_callback(get_azauth_res_callback_t get_cb);
 
 /*
  * Commands that are in flight are kept on linked lists and keyed by

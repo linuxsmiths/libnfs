@@ -1334,10 +1334,10 @@ rpc_auth_needs_refresh(struct rpc_context *rpc)
 	assert((int64_t) refresh_at > 0);
 
 	if (rpc->auth_context.is_authorized && now >= refresh_at) {
-		RPC_LOG(rpc, 1, "Auth token about to expire (or expired), "
+		RPC_LOG(rpc, 1, "%d Auth token about to expire (or expired), "
 		                "reconnecting to acquire a new token. "
 		                "refresh_at: %ld, now: %ld",
-				refresh_at, now);
+				rpc->use_azauth, refresh_at, now);
 		rpc->auth_context.is_authorized = FALSE;
 		rpc->auth_context.needs_refresh = TRUE;
 		return TRUE;
@@ -1978,7 +1978,7 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
                 return;
         }
 
-        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
+        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");        
 }
 
 /*
@@ -2039,6 +2039,73 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
         }
 }
 #endif /* HAVE_TLS */
+
+reconnect_fsinfo_cb(struct rpc_context *rpc, int status, void *command_data,
+                void *private_data)
+{
+	struct nfs_cb_data *data = private_data;
+	struct nfs_context *nfs = data->nfs;
+	FSINFO3res *res = command_data;
+	size_t readmax, writemax, dircount, maxcount;
+
+	assert(rpc->magic == RPC_CONTEXT_MAGIC);
+
+	if (check_nfs3_error(nfs, status, data, command_data)) {
+		free_nfs_cb_data(data);
+		return;
+	}
+
+	if (res->status != NFS3_OK) {
+		nfs_set_error(nfs, "NFS: FSINFO of %s failed with %s(%d)",
+                              nfs_get_export(nfs), nfsstat3_to_str(res->status),
+                              nfsstat3_to_errno(res->status));
+		data->cb(nfsstat3_to_errno(res->status), nfs,
+                         nfs_get_error(nfs), data->private_data);
+		free_nfs_cb_data(data);
+		return;
+        }
+
+	readmax = MIN(nfs->nfsi->readmax, res->FSINFO3res_u.resok.rtmax);
+	writemax = MIN(nfs->nfsi->writemax, res->FSINFO3res_u.resok.wtmax);
+
+	/* The server supports sizes up to rtmax and wtmax, so it is legal
+	 * to use smaller transfers sizes.
+	 */
+	if (nfs->nfsi->readmax < NFSMAXDATA2) {
+		nfs_set_error(nfs, "server max rsize of %d",
+                              (int)nfs->nfsi->readmax);
+		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
+		free_nfs_cb_data(data);
+		return;
+	} else {
+		nfs_set_readmax(nfs, readmax);
+	}
+
+	if (nfs->nfsi->writemax < NFSMAXDATA2) {
+		nfs_set_error(nfs, "server max wsize of %d",
+                              (int)nfs->nfsi->writemax);
+		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
+		free_nfs_cb_data(data);
+		return;
+	} else {
+		nfs_set_writemax(nfs, writemax);
+	}
+
+	dircount = MIN(nfs->nfsi->readdir_dircount, res->FSINFO3res_u.resok.dtpref);
+	maxcount = MIN(nfs->nfsi->readdir_maxcount, res->FSINFO3res_u.resok.dtpref);
+
+	if (nfs->nfsi->readdir_dircount < NFSMAXDATA2) {
+		nfs_set_error(nfs, "server dtpref of %d",
+                              (int)nfs->nfsi->readdir_dircount);
+		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
+		free_nfs_cb_data(data);
+		return;
+	} else {
+		nfs_set_readdir_max_buffer_size(nfs, dircount, maxcount);
+	}
+}
+
+
 
 static void
 reconnect_cb(struct rpc_context *rpc, int status, void *data,
@@ -2109,6 +2176,18 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
                 }
         }
 #endif
+        struct FSINFO3args args;
+
+        if (rpc_nfs3_fsinfo_task(rpc, reconnect_fsinfo_cb, &args, NULL) == NULL) {
+                RPC_LOG(rpc, 1, "reconnect_cb: rpc_nfs3_fsinfo_task() failed, "
+                                "restarting connection!");
+                if (rpc->fd != -1) {
+                        close(rpc->fd);
+                        rpc->fd  = -1;
+                }
+                rpc->is_connected = 0;
+                rpc_reconnect_requeue(rpc);
+        }
 }
 
 /* Disconnect but do not error all PDUs, just move pdus in-flight back to the
