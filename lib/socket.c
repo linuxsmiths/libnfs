@@ -375,16 +375,15 @@ rpc_write_to_socket(struct rpc_context *rpc)
                          * AZAUTH RPC is the only one queued with head priority and
                          * AZAUTH RPC MUST only be sent if use_azauth is true.
                          */
-                        assert(!pdu->is_head_prio || rpc->use_azauth);
+                        //assert(!pdu->is_head_prio || rpc->use_azauth);
 
                         /*
                          * If context needs auth and connection is not authorized (yet),
                          * only ever send AZAUTH RPCs out.
                          */
-                        if (rpc->use_azauth &&
-                            !rpc->auth_context.is_authorized &&
+                        if (!rpc->auth_context.is_authorized &&
                             !pdu->is_head_prio) {
-                                RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
+                                RPC_LOG(rpc, 3, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
                                 /*
                                  * If we have something to write, write it, else
@@ -1958,9 +1957,6 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-        /* Must be called only for TLS transport */
-        assert(rpc->use_azauth);
-
         /*
          * During reconnect, if azauth fails, we have no choice but to keep
          * trying.
@@ -2023,88 +2019,20 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
          * TLS handshake completed successfully.
          * If azauth is enabled, perform it now.
          */
-        if (rpc->use_azauth) {
-                RPC_LOG(rpc, 2, "reconnect_cb_tls: sending AZAUTH RPC");
+        RPC_LOG(rpc, 2, "reconnect_cb_tls: sending AZAUTH RPC");
 
-                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
-                        RPC_LOG(rpc, 1, "reconnect_cb_azauth: rpc_perform_azauth() failed, "
-                                        "restarting connection!");
-                        if (rpc->fd != -1) {
-                                close(rpc->fd);
-                                rpc->fd  = -1;
-                        }
-                        rpc->is_connected = 0;
-                        rpc_reconnect_requeue(rpc);
+        if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                RPC_LOG(rpc, 1, "reconnect_cb_azauth: rpc_perform_azauth() failed, "
+                                "restarting connection!");
+                if (rpc->fd != -1) {
+                        close(rpc->fd);
+                        rpc->fd  = -1;
                 }
+                rpc->is_connected = 0;
+                rpc_reconnect_requeue(rpc);
         }
 }
 #endif /* HAVE_TLS */
-
-reconnect_fsinfo_cb(struct rpc_context *rpc, int status, void *command_data,
-                void *private_data)
-{
-	struct nfs_cb_data *data = private_data;
-	struct nfs_context *nfs = data->nfs;
-	FSINFO3res *res = command_data;
-	size_t readmax, writemax, dircount, maxcount;
-
-	assert(rpc->magic == RPC_CONTEXT_MAGIC);
-
-	if (check_nfs3_error(nfs, status, data, command_data)) {
-		free_nfs_cb_data(data);
-		return;
-	}
-
-	if (res->status != NFS3_OK) {
-		nfs_set_error(nfs, "NFS: FSINFO of %s failed with %s(%d)",
-                              nfs_get_export(nfs), nfsstat3_to_str(res->status),
-                              nfsstat3_to_errno(res->status));
-		data->cb(nfsstat3_to_errno(res->status), nfs,
-                         nfs_get_error(nfs), data->private_data);
-		free_nfs_cb_data(data);
-		return;
-        }
-
-	readmax = MIN(nfs->nfsi->readmax, res->FSINFO3res_u.resok.rtmax);
-	writemax = MIN(nfs->nfsi->writemax, res->FSINFO3res_u.resok.wtmax);
-
-	/* The server supports sizes up to rtmax and wtmax, so it is legal
-	 * to use smaller transfers sizes.
-	 */
-	if (nfs->nfsi->readmax < NFSMAXDATA2) {
-		nfs_set_error(nfs, "server max rsize of %d",
-                              (int)nfs->nfsi->readmax);
-		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
-		free_nfs_cb_data(data);
-		return;
-	} else {
-		nfs_set_readmax(nfs, readmax);
-	}
-
-	if (nfs->nfsi->writemax < NFSMAXDATA2) {
-		nfs_set_error(nfs, "server max wsize of %d",
-                              (int)nfs->nfsi->writemax);
-		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
-		free_nfs_cb_data(data);
-		return;
-	} else {
-		nfs_set_writemax(nfs, writemax);
-	}
-
-	dircount = MIN(nfs->nfsi->readdir_dircount, res->FSINFO3res_u.resok.dtpref);
-	maxcount = MIN(nfs->nfsi->readdir_maxcount, res->FSINFO3res_u.resok.dtpref);
-
-	if (nfs->nfsi->readdir_dircount < NFSMAXDATA2) {
-		nfs_set_error(nfs, "server dtpref of %d",
-                              (int)nfs->nfsi->readdir_dircount);
-		data->cb(-EINVAL, nfs, nfs_get_error(nfs), data->private_data);
-		free_nfs_cb_data(data);
-		return;
-	} else {
-		nfs_set_readdir_max_buffer_size(nfs, dircount, maxcount);
-	}
-}
-
 
 
 static void
@@ -2155,31 +2083,16 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 #endif /* HAVE_TLS */
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
-        else if (rpc->use_azauth) {
-                /*
-                 * Insecure connection, if azauth is enabled perform auth.
-                 *
-                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
-                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
-                 */
-                RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
+        /*
+                * Insecure connection, if azauth is enabled perform auth.
+                *
+                * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+                *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
+                */
+        RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
 
-                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
-                        RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
-                                        "restarting connection!");
-                        if (rpc->fd != -1) {
-                                close(rpc->fd);
-                                rpc->fd  = -1;
-                        }
-                        rpc->is_connected = 0;
-                        rpc_reconnect_requeue(rpc);
-                }
-        }
-#endif
-        struct FSINFO3args args;
-
-        if (rpc_nfs3_fsinfo_task(rpc, reconnect_fsinfo_cb, &args, NULL) == NULL) {
-                RPC_LOG(rpc, 1, "reconnect_cb: rpc_nfs3_fsinfo_task() failed, "
+        if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
                                 "restarting connection!");
                 if (rpc->fd != -1) {
                         close(rpc->fd);
@@ -2188,6 +2101,7 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
                 rpc->is_connected = 0;
                 rpc_reconnect_requeue(rpc);
         }
+#endif
 }
 
 /* Disconnect but do not error all PDUs, just move pdus in-flight back to the

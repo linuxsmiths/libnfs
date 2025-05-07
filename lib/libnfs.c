@@ -951,14 +951,14 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const char *server_id = res->AZAUTH3res_u.resok.serverid;
-        const uint64_t server_cap_map = res->AZAUTH3res_u.resok.server_cap_map;
+        //const uint64_t server_cap_map = res->AZAUTH3res_u.resok.server_cap_map;
 
         assert(server_version);
         assert(server_id);
-        assert(server_cap_map);
+        //assert(server_cap_map);
 
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Served id=%s Server Capabilities=%llu",
-                server_version, server_id, server_cap_map);
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id=%s",
+                server_version, server_id);
 
         /* AZAUTH RPC successful, connection is now authorized */
         rpc->auth_context.is_authorized = TRUE;
@@ -1031,6 +1031,7 @@ rpc_connect_program_5_cb(struct rpc_context *rpc, int status,
                          void *command_data, void *private_data)
 {
 	struct rpc_cb_data *data = private_data;
+        RPC_LOG(rpc, 2, "We enter rpc_connect_program_5_cb");
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
@@ -1114,7 +1115,8 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
          */
         assert(rpc->tls_context.state == TLS_HANDSHAKE_COMPLETED);
 
-        if (rpc->use_azauth) {
+        uint64_t val = 1;
+        if (val == 1) {
                 if (rpc_perform_azauth(rpc, rpc_connect_program_5_cb,
                                        data) == NULL) {
                         data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
@@ -1132,6 +1134,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
                          void *command_data, void *private_data)
 {
 	struct rpc_cb_data *data = private_data;
+        uint64_t val = 1;
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
@@ -1173,7 +1176,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 #endif /* HAVE_TLS */
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
-        if (rpc->use_azauth) {
+        if (val == 1) {
                 /*
                  * Insecure connection, if azauth is enabled perform auth.
                  *
