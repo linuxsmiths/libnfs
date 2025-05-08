@@ -248,7 +248,7 @@ struct AZAUTH3args {
 struct AZAUTH3resok {
 	string server_version<16>;
 	string serverid<64>;
-	//uint64_t server_cap_map;
+	uint64_t server_cap_map;
 };
 
 union AZAUTH3res switch (nfsstat3 status) {
