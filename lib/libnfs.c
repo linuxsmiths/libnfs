@@ -629,6 +629,12 @@ int nfs_set_auth_context(struct nfs_context *nfs,
 #endif
                 assert(nfs->rpc->use_azauth == FALSE);
 
+                /*
+                 * Use_azauth is set to be enabled only when auth is enabled 
+                 * for turbo client. In that case, authtype sent is AzAuthAAD. 
+                 * AzAuth will be sent each time a connection is established/
+                 * reconnected by a turbo client.  
+                 */
                 if (!strcmp(authtype,"AzAuthAAD")) {
                         nfs->rpc->use_azauth = TRUE;
                 }
@@ -663,7 +669,6 @@ nfs_parse_url_incomplete(struct nfs_context *nfs, const char *url)
 {
 	return nfs_parse_url(nfs, url, 0, 1);
 }
-
 
 void
 nfs_destroy_url(struct nfs_url *url)
@@ -989,8 +994,6 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                  free_azauth_cb_data(data);
                  return;
         }
-
-        
 
         /* AZAUTH RPC successful, connection is now authorized */
         rpc->auth_context.is_authorized = TRUE;

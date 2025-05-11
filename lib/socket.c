@@ -383,7 +383,7 @@ rpc_write_to_socket(struct rpc_context *rpc)
                          */
                         if (!rpc->auth_context.is_authorized &&
                             !pdu->is_head_prio) {
-                                RPC_LOG(rpc, 3, "Not sending queued RPC pdu %p as "
+                                RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
                                 /*
                                  * If we have something to write, write it, else
@@ -1333,10 +1333,10 @@ rpc_auth_needs_refresh(struct rpc_context *rpc)
 	assert((int64_t) refresh_at > 0);
 
 	if (rpc->auth_context.is_authorized && now >= refresh_at) {
-		RPC_LOG(rpc, 1, "%d Auth token about to expire (or expired), "
+		RPC_LOG(rpc, 1, "Auth token about to expire (or expired), "
 		                "reconnecting to acquire a new token. "
 		                "refresh_at: %ld, now: %ld",
-				rpc->use_azauth, refresh_at, now);
+				refresh_at, now);
 		rpc->auth_context.is_authorized = FALSE;
 		rpc->auth_context.needs_refresh = TRUE;
 		return TRUE;
@@ -1974,7 +1974,7 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
                 return;
         }
 
-        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");        
+        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");  
 }
 
 /*
@@ -2034,7 +2034,6 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
 }
 #endif /* HAVE_TLS */
 
-
 static void
 reconnect_cb(struct rpc_context *rpc, int status, void *data,
              void *private_data)
@@ -2084,11 +2083,11 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
         /*
-                * Insecure connection, if azauth is enabled perform auth.
-                *
-                * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
-                *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
-                */
+         * Insecure connection, if azauth is enabled perform auth.
+         *
+         * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+         *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
+         */
         RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
 
         if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
