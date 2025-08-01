@@ -294,6 +294,7 @@ typedef struct AZAUTH3args AZAUTH3args;
 struct AZAUTH3resok {
 	char *server_version;
 	char *serverid;
+	uint64_t server_cap_map;
 };
 typedef struct AZAUTH3resok AZAUTH3resok;
 

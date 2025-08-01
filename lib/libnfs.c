@@ -241,6 +241,24 @@ get_azauth_token(struct auth_context *auth)
 	return get_auth_token_cb(auth);
 }
 
+static set_azauth_res_sc_callback_t set_azauth_res_sc_cb = 0;
+
+void
+set_azauth_res_callback(set_azauth_res_sc_callback_t set_cb)
+{
+        assert(set_cb);
+
+        set_azauth_res_sc_cb = set_cb;
+}
+
+static uint64_t 
+set_server_cap_azauthres(uint64_t server_cap)
+{
+        return set_azauth_res_sc_cb(server_cap);
+}
+
+
+
 static void
 free_azauth_token(struct auth_token_cb_res *res, AZAUTH3args *args)
 {
@@ -611,7 +629,15 @@ int nfs_set_auth_context(struct nfs_context *nfs,
 #endif
                 assert(nfs->rpc->use_azauth == FALSE);
 
-                nfs->rpc->use_azauth = TRUE;
+                /*
+                 * Use_azauth is set to be enabled only when auth is enabled 
+                 * for turbo client. In that case, authtype sent is AzAuthAAD. 
+                 * AzAuth will be sent each time a connection is established/
+                 * reconnected by a turbo client.  
+                 */
+                if (!strcmp(authtype,"AzAuthAAD")) {
+                        nfs->rpc->use_azauth = TRUE;
+                }
 
                 nfs->rpc->auth_context.magic = AUTH_CONTEXT_MAGIC;
                 nfs->rpc->auth_context.export_path = strdup(export_path);
@@ -643,7 +669,6 @@ nfs_parse_url_incomplete(struct nfs_context *nfs, const char *url)
 {
 	return nfs_parse_url(nfs, url, 0, 1);
 }
-
 
 void
 nfs_destroy_url(struct nfs_url *url)
@@ -908,8 +933,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         assert(data->magic == AZAUTH_CB_DATA_MAGIC);
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
-        /* Must be called only when use_azauth is true */
-        assert(rpc->use_azauth);
+
         /* rpc_perform_azauth() MUST have set is_authorized to FALSE */
         assert(rpc->auth_context.is_authorized == FALSE);
 
@@ -950,12 +974,26 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const char *server_id = res->AZAUTH3res_u.resok.serverid;
+        const uint64_t server_cap_map = res->AZAUTH3res_u.resok.server_cap_map;
 
         assert(server_version);
         assert(server_id);
+        assert(server_cap_map);
 
-        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Served id=%s",
-                server_version, server_id);
+        RPC_LOG(rpc, 2, "AZAUTH Server version=%s Server id=%s Server Cap Map: %lu",
+                server_version, server_id, server_cap_map);
+        
+        if (set_server_cap_azauthres(server_cap_map) == -1) {
+                RPC_LOG(rpc, 1, "Failed to set server capabilities map in client");
+                /*
+                 * Caller doesn't care if it's NFS error or RPC error.
+                 * For any failure we should call the callback with failed
+                 * status.
+                 */
+                 data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
+                 free_azauth_cb_data(data);
+                 return;
+        }
 
         /* AZAUTH RPC successful, connection is now authorized */
         rpc->auth_context.is_authorized = TRUE;
@@ -1028,6 +1066,7 @@ rpc_connect_program_5_cb(struct rpc_context *rpc, int status,
                          void *command_data, void *private_data)
 {
 	struct rpc_cb_data *data = private_data;
+        RPC_LOG(rpc, 2, "We enter rpc_connect_program_5_cb");
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
@@ -1111,7 +1150,8 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
          */
         assert(rpc->tls_context.state == TLS_HANDSHAKE_COMPLETED);
 
-        if (rpc->use_azauth) {
+        uint64_t val = 1;
+        if (val == 1) {
                 if (rpc_perform_azauth(rpc, rpc_connect_program_5_cb,
                                        data) == NULL) {
                         data->cb(rpc, RPC_STATUS_ERROR, NULL, data->private_data);
@@ -1129,6 +1169,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
                          void *command_data, void *private_data)
 {
 	struct rpc_cb_data *data = private_data;
+        uint64_t val = 1;
 
 	assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
@@ -1170,7 +1211,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 #endif /* HAVE_TLS */
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
-        if (rpc->use_azauth) {
+        if (val == 1) {
                 /*
                  * Insecure connection, if azauth is enabled perform auth.
                  *
@@ -2830,8 +2871,6 @@ rpc_null_task_authtls(struct rpc_context *rpc, int nfs_version, rpc_cb cb,
 struct rpc_pdu *
 rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 {
-        /* MUST be called only if use_azauth is enabled */
-        assert(rpc->use_azauth);
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
         struct rpc_pdu *pdu;

@@ -375,14 +375,13 @@ rpc_write_to_socket(struct rpc_context *rpc)
                          * AZAUTH RPC is the only one queued with head priority and
                          * AZAUTH RPC MUST only be sent if use_azauth is true.
                          */
-                        assert(!pdu->is_head_prio || rpc->use_azauth);
+                        //assert(!pdu->is_head_prio || rpc->use_azauth);
 
                         /*
                          * If context needs auth and connection is not authorized (yet),
                          * only ever send AZAUTH RPCs out.
                          */
-                        if (rpc->use_azauth &&
-                            !rpc->auth_context.is_authorized &&
+                        if (!rpc->auth_context.is_authorized &&
                             !pdu->is_head_prio) {
                                 RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
@@ -1966,9 +1965,6 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
 
         assert(rpc->magic == RPC_CONTEXT_MAGIC);
 
-        /* Must be called only for TLS transport */
-        assert(rpc->use_azauth);
-
         /*
          * During reconnect, if azauth fails, we have no choice but to keep
          * trying.
@@ -1986,7 +1982,7 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
                 return;
         }
 
-        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
+        RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");  
 }
 
 /*
@@ -2031,19 +2027,17 @@ reconnect_cb_tls(struct rpc_context *rpc, int status,
          * TLS handshake completed successfully.
          * If azauth is enabled, perform it now.
          */
-        if (rpc->use_azauth) {
-                RPC_LOG(rpc, 2, "reconnect_cb_tls: sending AZAUTH RPC");
+        RPC_LOG(rpc, 2, "reconnect_cb_tls: sending AZAUTH RPC");
 
-                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
-                        RPC_LOG(rpc, 1, "reconnect_cb_azauth: rpc_perform_azauth() failed, "
-                                        "restarting connection!");
-                        if (rpc->fd != -1) {
-                                close(rpc->fd);
-                                rpc->fd  = -1;
-                        }
-                        rpc->is_connected = 0;
-                        rpc_reconnect_requeue(rpc);
+        if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                RPC_LOG(rpc, 1, "reconnect_cb_azauth: rpc_perform_azauth() failed, "
+                                "restarting connection!");
+                if (rpc->fd != -1) {
+                        close(rpc->fd);
+                        rpc->fd  = -1;
                 }
+                rpc->is_connected = 0;
+                rpc_reconnect_requeue(rpc);
         }
 }
 #endif /* HAVE_TLS */
@@ -2096,25 +2090,23 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 #endif /* HAVE_TLS */
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
-        else if (rpc->use_azauth) {
-                /*
-                 * Insecure connection, if azauth is enabled perform auth.
-                 *
-                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
-                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
-                 */
-                RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
+        /*
+         * Insecure connection, if azauth is enabled perform auth.
+         *
+         * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+         *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
+         */
+        RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
 
-                if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
-                        RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
-                                        "restarting connection!");
-                        if (rpc->fd != -1) {
-                                close(rpc->fd);
-                                rpc->fd  = -1;
-                        }
-                        rpc->is_connected = 0;
-                        rpc_reconnect_requeue(rpc);
+        if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
+                RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
+                                "restarting connection!");
+                if (rpc->fd != -1) {
+                        close(rpc->fd);
+                        rpc->fd  = -1;
                 }
+                rpc->is_connected = 0;
+                rpc_reconnect_requeue(rpc);
         }
 #endif
 }

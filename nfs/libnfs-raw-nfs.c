@@ -448,6 +448,8 @@ zdr_AZAUTH3resok (ZDR *zdrs, AZAUTH3resok *objp)
 		 return FALSE;
 	 if (!zdr_string (zdrs, &objp->serverid, 64))
 		 return FALSE;
+	 if (!zdr_uint64_t (zdrs, &objp->server_cap_map))
+		 return FALSE;
 	return TRUE;
 }
 

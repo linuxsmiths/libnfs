@@ -248,10 +248,18 @@ EXTERN void nfs_destroy_context(struct nfs_context *nfs);
  */
 typedef struct auth_token_cb_res *(*get_token_callback_t)(struct auth_context *auth);
 
+typedef uint64_t (*set_azauth_res_sc_callback_t)(uint64_t server_cap_map);
+
 /*
  * Function to set get_token_callback_t.
  */
 EXTERN void set_auth_token_callback(get_token_callback_t get_cb);
+
+/*
+ * Function to set set_azauth_res_sc_callback_t.
+ */
+
+EXTERN void set_azauth_res_callback(set_azauth_res_sc_callback_t set_cb);
 
 /*
  * Commands that are in flight are kept on linked lists and keyed by
