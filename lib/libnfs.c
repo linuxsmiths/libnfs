@@ -892,6 +892,7 @@ void free_tls_cb_data(struct tls_cb_data *data)
         assert(data->magic == TLS_CB_DATA_MAGIC);
         free(data);
 }
+#endif /* HAVE_TLS */
 
 /*
  * Callback function called when we get a response for an AZAUTH RPC from the
@@ -967,6 +968,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         free_azauth_cb_data(data);
 }
 
+#ifdef HAVE_TLS
 /*
  * Callback function called when we get a response for an AUTH_TLS NULL RPC
  * that we sent to the server.
@@ -1083,6 +1085,7 @@ rpc_connect_program_5_cb(struct rpc_context *rpc, int status,
 	free_rpc_cb_data(data);
 }
 
+#ifdef HAVE_TLS
 static void
 rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                            void *command_data, void *private_data)
@@ -1123,6 +1126,7 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                 return;
         }
 }
+#endif /* HAVE_TLS */
 
 static void
 rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
