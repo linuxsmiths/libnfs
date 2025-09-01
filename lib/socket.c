@@ -1951,7 +1951,6 @@ rpc_disconnect(struct rpc_context *rpc, const char *error)
 	return 0;
 }
 
-#ifdef HAVE_TLS
 
 /*
  * During TCP reconnection, for secure transport, we need to re-perform auth.
@@ -1989,6 +1988,7 @@ reconnect_cb_azauth(struct rpc_context *rpc, int status,
         RPC_LOG(rpc, 2, "reconnect_cb_azauth: AzAuth completed successfully!");
 }
 
+#ifdef HAVE_TLS 
 /*
  * During TCP reconnection (either server or client closes connection) for secure
  * transport we need to perform the TLS handshake. This is the callback function
@@ -2096,7 +2096,7 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 #endif /* HAVE_TLS */
 
 #ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
-        else if (rpc->use_azauth) {
+        if (rpc->use_azauth) {
                 /*
                  * Insecure connection, if azauth is enabled perform auth.
                  *
