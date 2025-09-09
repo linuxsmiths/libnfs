@@ -238,6 +238,16 @@ set_auth_token_callback(get_token_callback_t get_cb)
 static struct auth_token_cb_res *
 get_azauth_token(struct auth_context *auth)
 {
+        // Only access internals here, not in user code!
+        if (auth->azauth_data && auth->expiry_time > time(NULL)) {
+                fprintf(stderr, "Using cached auth token, expiry_time: %lu \n",
+                        auth->expiry_time);
+                // Already cached and valid
+                struct auth_token_cb_res *cb_res = malloc(sizeof(struct auth_token_cb_res));
+                cb_res->azauth_data = strdup(auth->azauth_data);
+                cb_res->expiry_time = auth->expiry_time;
+                return cb_res;
+        }
 	return get_auth_token_cb(auth);
 }
 
@@ -620,6 +630,7 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                 nfs->rpc->auth_context.client_id = strdup(client_id);
                 nfs->rpc->auth_context.is_authorized = FALSE;
                 nfs->rpc->auth_context.expiry_time = 0;
+                nfs->rpc->auth_context.azauth_data = NULL;
 
                 return 0;
         }
@@ -2862,10 +2873,12 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
 
         rpc->auth_context.is_authorized = FALSE;
         rpc->auth_context.expiry_time = res->expiry_time;
+        rpc->auth_context.azauth_data = strdup(res->azauth_data);
 
         struct azauth_cb_data *data = calloc(1, sizeof(*data));
         if (data == NULL) {
                 free_azauth_token(res, &azauthargs);
+                free(rpc->auth_context.azauth_data);
                 rpc_set_error(rpc, "Out of memory. Failed to allocate azauth_cb_data");
                 return NULL;
         }
@@ -2881,6 +2894,7 @@ rpc_perform_azauth(struct rpc_context *rpc, rpc_cb cb, void *private_data)
         if (pdu == NULL) {
                 rpc_set_error(rpc, "AZAUTH RPC failed to set pdu");
                 free_azauth_token(res, &azauthargs);
+                free(rpc->auth_context.azauth_data);
                 free_azauth_cb_data(data);
                 return NULL;
         }

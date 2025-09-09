@@ -318,6 +318,12 @@ struct auth_context {
         bool_t needs_refresh;
 
         /*
+         * Auth token cached for this context.
+         * Updated after a successful call to get_token_callback_t.
+         */
+        char *azauth_data;
+
+        /*
          * Expiry time of the current token.
          * Updated after a successful call to get_token_callback_t.
          */
