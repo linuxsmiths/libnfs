@@ -706,7 +706,6 @@ rpc_read_from_socket(struct rpc_context *rpc)
 
         while (1){
                 if (rpc->inpos == 0) {
-                        //RPC_LOG(rpc, 2, "printing state %d" rpc->state);
                         switch (rpc->state) {
                         case READ_RM:
                                 /*
@@ -773,9 +772,7 @@ rpc_read_from_socket(struct rpc_context *rpc)
                         }
                 }
 
-                RPC_LOG(rpc, 2, "%d %d", rpc->inpos, rpc->pdu_size);
                 count = rpc->pdu_size - rpc->inpos;
-                RPC_LOG(rpc, 2, "1st %d", count);
                 /*
                  * When reading padding, clamp this so we do not overwrite
                  * rpc->inbuf/rpc->inbuf_size which we use as the garbage buffer
@@ -787,20 +784,13 @@ rpc_read_from_socket(struct rpc_context *rpc)
                         }
                 }
 
-                RPC_LOG(rpc, 2, "2nd %d", count);
-
                 if (rpc->buf) {
-                        RPC_LOG(rpc, 2, "2nd to %d %d", count, rpc->fd);
                         count = recv(rpc->fd, rpc->buf, count, MSG_DONTWAIT);
-                        perror("recv");
                 } else {
                         assert(rpc->pdu->in.iovcnt > 0);
                         assert(count <= rpc->pdu->in.remaining_size);
                         count = readv(rpc->fd, rpc->pdu->in.iov, rpc->pdu->in.iovcnt);
                 }
-
-                RPC_LOG(rpc, 2, "3rd %d", count);
-                //RPC_LOG(rpc, 2,"%d %d", rpc->inpos, count);
 
                 if (count < 0) {
                         /*
