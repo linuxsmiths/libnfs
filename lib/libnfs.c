@@ -604,7 +604,7 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                 /*
                  * If not devtest, don't allow auth unless transport is secure.
                  */
-                if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
+                if ((nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) && (strcmp(authtype, "AzAuthAAD") == 0)) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
                         return -1;
                 }
