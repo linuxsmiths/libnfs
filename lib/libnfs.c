@@ -604,7 +604,7 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                 /*
                  * If not devtest, don't allow auth unless transport is secure.
                  */
-                if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
+                if ((nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) && (strcmp(authtype, "AzAuthAAD") == 0)) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
                         return -1;
                 }
@@ -946,7 +946,7 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
                 return;
         }
 
-        RPC_LOG(rpc, 2, "AZAUTH successful!");
+        RPC_LOG(rpc, 2, "AZAUTH successful done!");
 
         const char *server_version = res->AZAUTH3res_u.resok.server_version;
         const char *server_id = res->AZAUTH3res_u.resok.serverid;
