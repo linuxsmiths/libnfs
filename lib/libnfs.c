@@ -356,19 +356,22 @@ nfs_set_context_args(struct nfs_context *nfs, const char *arg, const char *val)
 		} else {
 			nfs_set_readdir_max_buffer_size(nfs, atoi(val), atoi(val));
 		}
-#ifdef HAVE_TLS
 	} else if (nfs->rpc && !strcmp(arg, "xprtsec")) {
 		if (!strcmp(val, "none")) {
+#ifdef HAVE_TLS
 			nfs_set_xprtsecurity(nfs, RPC_XPRTSEC_NONE);
+#endif
+			/* Non-TLS transport, nothing to configure. */
+#ifdef HAVE_TLS
 		} else if (!strcmp(val, "tls")) {
 			nfs_set_xprtsecurity(nfs, RPC_XPRTSEC_TLS);
 		} else  if (!strcmp(val, "mtls")) {
 			nfs_set_xprtsecurity(nfs, RPC_XPRTSEC_MTLS);
+#endif /* HAVE_TLS */
 		} else {
 			nfs_set_error(nfs, "Unknown/unsupported xprtsec type : %s", val);
 			return -1;
 		}
-#endif /* HAVE_TLS */
 #ifdef HAVE_LIBKRB5
 	} else if (nfs->rpc && !strcmp(arg, "sec")) {
                 /*
@@ -600,9 +603,11 @@ int nfs_set_auth_context(struct nfs_context *nfs,
         assert(client_id);
 
         if (nfs->rpc) {
-#ifndef ENABLE_INSECURE_AUTH_FOR_DEVTEST
+#if defined(HAVE_TLS) && !defined(ENABLE_INSECURE_AUTH_FOR_DEVTEST)
                 /*
                  * If not devtest, don't allow auth unless transport is secure.
+                 * Note: When TLS support is not compiled in (no gnutls), only
+                 * the non-TLS transport exists, so auth is always allowed.
                  */
                 if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
@@ -886,13 +891,6 @@ void free_azauth_cb_data(struct azauth_cb_data *data)
         free(data);
 }
 
-#ifdef HAVE_TLS
-void free_tls_cb_data(struct tls_cb_data *data)
-{
-        assert(data->magic == TLS_CB_DATA_MAGIC);
-        free(data);
-}
-
 /*
  * Callback function called when we get a response for an AZAUTH RPC from the
  * server.
@@ -914,7 +912,18 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
         assert(rpc->auth_context.is_authorized == FALSE);
 
         if (status != RPC_STATUS_SUCCESS) {
-                RPC_LOG(rpc, 1, "AZAUTH RPC failure, status = %d", status);
+                /*
+                 * The most common reason for the AZAUTH RPC to fail (either a
+                 * timeout with no response, or the server rejecting the RPC) is
+                 * that the server does not have AzAuth (AzAuthNone) enabled or
+                 * setup for this account. Call this out clearly so it's easy to
+                 * tell apart from a generic network failure.
+                 */
+                RPC_LOG(rpc, 1, "AZAUTH RPC failed (status=%d): the server "
+                                "rejected or did not respond to the AZAUTH "
+                                "(AzAuthNone) RPC. This usually means AzAuth "
+                                "(AzAuthNone) is not enabled/setup on the server "
+                                "for this account.", status);
 
                 data->cb(rpc, status, command_data, data->private_data);
                 free_azauth_cb_data(data);
@@ -965,6 +974,13 @@ rpc_connect_program_4_2_cb(struct rpc_context *rpc, int status,
          */
         data->cb(rpc, RPC_STATUS_SUCCESS, NULL, data->private_data);
         free_azauth_cb_data(data);
+}
+
+#ifdef HAVE_TLS
+void free_tls_cb_data(struct tls_cb_data *data)
+{
+        assert(data->magic == TLS_CB_DATA_MAGIC);
+        free(data);
 }
 
 /*
@@ -1169,13 +1185,14 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 	} else
 #endif /* HAVE_TLS */
 
-#ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
         if (rpc->use_azauth) {
                 /*
-                 * Insecure connection, if azauth is enabled perform auth.
-                 *
-                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
-                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
+                 * TLS support has been removed, so AZAUTH is always sent over a
+                 * non-TLS connection. When the context has azauth enabled we
+                 * send the AZAUTH RPC (AzAuthNone/AzAuthAAD) as the very first
+                 * RPC on the connection. If the server does not have azauth
+                 * enabled it will not respond and the AZAUTH RPC will time out;
+                 * rpc_connect_program_4_2_cb() reports that case clearly.
                  */
                 if (rpc_perform_azauth(rpc, rpc_connect_program_5_cb, data) == NULL) {
                         data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
@@ -1183,7 +1200,6 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
                         return;
                 }
         } else
-#endif
         if (rpc_null_task(rpc, data->program, data->version,
                           rpc_connect_program_5_cb, data) == NULL) {
                 data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
