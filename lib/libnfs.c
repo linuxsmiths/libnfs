@@ -609,7 +609,7 @@ int nfs_set_auth_context(struct nfs_context *nfs,
                  * Note: When TLS support is not compiled in (no gnutls), only
                  * the non-TLS transport exists, so auth is always allowed.
                  */
-                if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
+                if ((nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) && (strcmp(authtype, "AzAuthAAD") == 0)) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
                         return -1;
                 }
