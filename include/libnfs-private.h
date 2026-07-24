@@ -518,6 +518,7 @@ struct rpc_context {
 
 	/* Context used for performing TLS handshake with the server */
 	struct tls_context tls_context;
+#endif /* HAVE_TLS */
 
         /*
          * Do we need to perform auth on connect/reconnect?
@@ -532,7 +533,6 @@ struct rpc_context {
          */
         bool_t use_azauth;
         struct auth_context auth_context;
-#endif /* HAVE_TLS */
 
 #ifdef HAVE_LIBKRB5
         const char *username;
