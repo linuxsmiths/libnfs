@@ -1167,6 +1167,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 				(rpc->wanted_xprtsec == RPC_XPRTSEC_TLS ||
 				 rpc->wanted_xprtsec == RPC_XPRTSEC_MTLS);
 	if (rpc->use_tls) {
+                RPC_LOG(rpc, 2, "Securing connection with TLS [lOG ADDED]");
 		/* We should not use TLS for anything other than NFS */
 		assert(data->program == NFS_PROGRAM);
 
@@ -1186,6 +1187,9 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 #endif /* HAVE_TLS */
 
         if (rpc->use_azauth) {
+
+                RPC_LOG(rpc, 2, "Performing AZAUTH over insecure connection "
+                        "[lOG ADDED]");
                 /*
                  * TLS support has been removed, so AZAUTH is always sent over a
                  * non-TLS connection. When the context has azauth enabled we

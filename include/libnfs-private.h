@@ -292,7 +292,7 @@ struct auth_context {
         /* /account/container for which the token is required */
         char *export_path;
 
-        /* AuthType, currently only AzAuthAAD is supported */
+        /* AuthType, currently only AzAuthAAD and AzAuthNone is supported */
         char *auth_type;
 
         /* Version of the client which initiates the auth request */
