@@ -2095,13 +2095,15 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
 		}
 	} else
 #endif /* HAVE_TLS */
+#ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
         if (rpc->use_azauth) {
                 /*
-                 * TLS support has been removed, so AZAUTH is sent over the
-                 * non-TLS connection on reconnect too. This re-authorizes the
-                 * reconnected connection before any other RPC is sent on it.
+                 * Insecure connection, if azauth is enabled perform auth.
+                 *
+                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
                  */
-                RPC_LOG(rpc, 2, "reconnect_cb: sending AZAUTH RPC");
+                RPC_LOG(rpc, 2, "reconnect_cb: sending insecure AZAUTH RPC");
 
                 if (rpc_perform_azauth(rpc, reconnect_cb_azauth, NULL) == NULL) {
                         RPC_LOG(rpc, 1, "reconnect_cb: rpc_perform_azauth() failed, "
@@ -2114,6 +2116,7 @@ reconnect_cb(struct rpc_context *rpc, int status, void *data,
                         rpc_reconnect_requeue(rpc);
                 }
         }
+#endif
 }
 
 /* Disconnect but do not error all PDUs, just move pdus in-flight back to the

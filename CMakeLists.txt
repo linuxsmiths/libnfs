@@ -36,6 +36,16 @@ endif()
 
 if(ENABLE_INSECURE_AUTH_FOR_DEVTEST)
   add_definitions(-DENABLE_INSECURE_AUTH_FOR_DEVTEST)
+else()
+  #
+  # RPC-with-TLS support (and its GnuTLS dependency) has been removed, so the
+  # only supported transport is non-TLS and AZAUTH is sent over that non-TLS
+  # connection. That is only permitted when ENABLE_INSECURE_AUTH_FOR_DEVTEST is
+  # enabled, so bail out here (static gate) if it is disabled.
+  #
+  message(FATAL_ERROR "ENABLE_INSECURE_AUTH_FOR_DEVTEST must be enabled: TLS "
+                      "support has been removed and AZAUTH is sent over the "
+                      "non-TLS connection.")
 endif()
 
 include(cmake/Macros.cmake)
@@ -70,6 +80,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   # RPC-with-TLS support (and its GnuTLS dependency) has been removed. Only the
   # non-TLS transport (xprtsec=none) is supported. This avoids depending on
   # gnutls which is not an allowed package on some distros (e.g. Azure Linux).
+  # HAVE_TLS is intentionally never defined; a static gate in libnfs-private.h
+  # bails out at compile time if HAVE_TLS is ever enabled.
   #
 elseif(CMAKE_SYSTEM_NAME STREQUAL Windows OR CMAKE_SYSTEM_NAME STREQUAL WindowsStore)
   add_definitions("-D_U_=" -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE)
