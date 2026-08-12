@@ -20,7 +20,12 @@ option(ENABLE_PARANOID "Enable paranoid checking in the code" OFF)
 option(ENABLE_UTILS "Build util programs" OFF)
 option(ENABLE_EXAMPLES "Build example programs" OFF)
 option(ENABLE_MULTITHREADING "Enable multithreading support" OFF)
-option(ENABLE_INSECURE_AUTH_FOR_DEVTEST "Enable AZAUTH for non-TLS connections" OFF)
+#
+# RPC-with-TLS support (and its GnuTLS dependency) has been removed, so the only
+# supported transport is non-TLS and AZAUTH is sent over that non-TLS connection.
+# That requires ENABLE_INSECURE_AUTH_FOR_DEVTEST, hence it defaults to ON here.
+#
+option(ENABLE_INSECURE_AUTH_FOR_DEVTEST "Enable AZAUTH for non-TLS connections" ON)
 
 if(ENABLE_TESTS)
   set(ENABLE_UTILS ON CACHE BOOL "Building utils required by tests" FORCE)
