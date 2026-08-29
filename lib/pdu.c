@@ -919,7 +919,7 @@ int rpc_queue_pdu2(struct rpc_context *rpc, struct rpc_pdu *pdu, int prio)
                         if (sendto(rpc->fd, pdu->zdr.buf, size, MSG_DONTWAIT,
                                    (struct sockaddr *)&rpc->udp_dest,
                                    sizeof(rpc->udp_dest)) < 0) {
-                                rpc_set_error(rpc, "Sendto failed with errno %s", strerror(errno));
+                                rpc_set_error(rpc, "Send to failed with errno %s", strerror(errno));
                                 rpc_free_pdu(rpc, pdu);
                                 return -1;
                         }

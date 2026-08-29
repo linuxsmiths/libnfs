@@ -710,7 +710,7 @@ rpc_read_from_socket(struct rpc_context *rpc)
                         case READ_RM:
                                 /*
                                  * Read record marker,
-                                 * And if this is a cleint context read the next 4 bytes
+                                 * And if this is a client context read the next 4 bytes
                                  * i.e. the XID on a client
                                  */
                                 rpc->pdu_size = 8;
