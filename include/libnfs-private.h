@@ -39,6 +39,25 @@
 #include <gnutls/gnutls.h>
 #endif
 
+/*
+ * Static configuration gates.
+ *
+ * RPC-with-TLS support (and its GnuTLS dependency) has been removed, so the
+ * only supported transport is non-TLS (xprtsec=none) and AZAUTH is sent over
+ * that non-TLS connection. That is only permitted when
+ * ENABLE_INSECURE_AUTH_FOR_DEVTEST is enabled. These gates bail out at compile
+ * time (rather than fail mysteriously later) if the build is not configured
+ * as expected:
+ * - HAVE_TLS must NOT be enabled.
+ * - ENABLE_INSECURE_AUTH_FOR_DEVTEST must be enabled.
+ */
+#ifdef HAVE_TLS
+#error "HAVE_TLS must not be enabled: RPC-with-TLS support has been removed."
+#endif
+#ifndef ENABLE_INSECURE_AUTH_FOR_DEVTEST
+#error "ENABLE_INSECURE_AUTH_FOR_DEVTEST must be enabled: TLS support has been removed and AZAUTH is sent over the non-TLS connection."
+#endif
+
 #if defined(WIN32) && !defined(IFNAMSIZ)
 #define IFNAMSIZ 255
 #endif

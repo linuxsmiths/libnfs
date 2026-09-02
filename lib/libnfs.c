@@ -358,10 +358,10 @@ nfs_set_context_args(struct nfs_context *nfs, const char *arg, const char *val)
 		}
 	} else if (nfs->rpc && !strcmp(arg, "xprtsec")) {
 		if (!strcmp(val, "none")) {
-#ifdef HAVE_TLS
-			nfs_set_xprtsecurity(nfs, RPC_XPRTSEC_NONE);
-#endif
-			/* Non-TLS transport, nothing to configure. */
+			/*
+			 * Non-TLS is the only supported transport, so there
+			 * is nothing to configure for xprtsec=none.
+			 */
 #ifdef HAVE_TLS
 		} else if (!strcmp(val, "tls")) {
 			nfs_set_xprtsecurity(nfs, RPC_XPRTSEC_TLS);
@@ -603,11 +603,9 @@ int nfs_set_auth_context(struct nfs_context *nfs,
         assert(client_id);
 
         if (nfs->rpc) {
-#if defined(HAVE_TLS) && !defined(ENABLE_INSECURE_AUTH_FOR_DEVTEST)
+#ifndef ENABLE_INSECURE_AUTH_FOR_DEVTEST
                 /*
                  * If not devtest, don't allow auth unless transport is secure.
-                 * Note: When TLS support is not compiled in (no gnutls), only
-                 * the non-TLS transport exists, so auth is always allowed.
                  */
                 if (nfs->rpc->wanted_xprtsec == RPC_XPRTSEC_NONE) {
                         RPC_LOG(nfs->rpc, 1, "Cannot enable auth for xprtsec=none");
@@ -1099,6 +1097,7 @@ rpc_connect_program_5_cb(struct rpc_context *rpc, int status,
 	free_rpc_cb_data(data);
 }
 
+#ifdef HAVE_TLS
 static void
 rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                            void *command_data, void *private_data)
@@ -1139,6 +1138,7 @@ rpc_connect_program_5_0_cb(struct rpc_context *rpc, int status,
                 return;
         }
 }
+#endif /* HAVE_TLS */
 
 static void
 rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
@@ -1185,14 +1185,13 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
 	} else
 #endif /* HAVE_TLS */
 
+#ifdef ENABLE_INSECURE_AUTH_FOR_DEVTEST
         if (rpc->use_azauth) {
                 /*
-                 * TLS support has been removed, so AZAUTH is always sent over a
-                 * non-TLS connection. When the context has azauth enabled we
-                 * send the AZAUTH RPC (AzAuthNone/AzAuthAAD) as the very first
-                 * RPC on the connection. If the server does not have azauth
-                 * enabled it will not respond and the AZAUTH RPC will time out;
-                 * rpc_connect_program_4_2_cb() reports that case clearly.
+                 * Insecure connection, if azauth is enabled perform auth.
+                 *
+                 * Note: THIS WOULD SEND THE TOKEN OVER AN INSECURE CONNECTION
+                 *       AND MUST ONLY BE USED IN DEVTEST ON TRUSTED NETWORKS.
                  */
                 if (rpc_perform_azauth(rpc, rpc_connect_program_5_cb, data) == NULL) {
                         data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
@@ -1200,6 +1199,7 @@ rpc_connect_program_4_cb(struct rpc_context *rpc, int status,
                         return;
                 }
         } else
+#endif
         if (rpc_null_task(rpc, data->program, data->version,
                           rpc_connect_program_5_cb, data) == NULL) {
                 data->cb(rpc, RPC_STATUS_ERROR, command_data, data->private_data);
