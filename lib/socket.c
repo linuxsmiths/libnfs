@@ -383,6 +383,7 @@ rpc_write_to_socket(struct rpc_context *rpc)
                          */
                         if (rpc->use_azauth &&
                             !rpc->auth_context.is_authorized &&
+                            strcmp(rpc->auth_context.auth_type, "AzAuthAAD") == 0 &&
                             !pdu->is_head_prio) {
                                 RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
@@ -785,7 +786,9 @@ rpc_read_from_socket(struct rpc_context *rpc)
                 }
 
                 if (rpc->buf) {
+                        RPC_LOG(rpc, 5, "Reading %d bytes into %p", count, rpc->buf);
                         count = recv(rpc->fd, rpc->buf, count, MSG_DONTWAIT);
+                        RPC_LOG(rpc, 5, "Reading %d bytes into %p log after", count, rpc->buf);
                 } else {
                         assert(rpc->pdu->in.iovcnt > 0);
                         assert(count <= rpc->pdu->in.remaining_size);
@@ -1300,6 +1303,10 @@ rpc_auth_needs_refresh(struct rpc_context *rpc)
 	if (!rpc->use_azauth) {
 		return FALSE;
 	}
+
+        if (strcmp(rpc->auth_context.auth_type, "AzAuthAAD") != 0) {
+                return FALSE;
+        }
 
         /*
          * If auth type is AzAuthNone, we should not do a token refresh as it is
