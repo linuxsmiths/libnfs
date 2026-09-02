@@ -383,7 +383,8 @@ rpc_write_to_socket(struct rpc_context *rpc)
                          */
                         if (rpc->use_azauth &&
                             !rpc->auth_context.is_authorized &&
-                            !pdu->is_head_prio) {
+                            !pdu->is_head_prio && strcmp(rpc->auth_context.auth_type,
+                                                         "AzAuthAAD") == 0) {
                                 RPC_LOG(rpc, 2, "Not sending queued RPC pdu %p as "
                                                 "connection is not authorized", pdu);
                                 /*
